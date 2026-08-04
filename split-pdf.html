@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tools Kepegawaian - Split PDF</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    
+    <!-- PDF-lib & JSZip for Client-Side Split -->
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .upload-area:hover {
+            background: rgba(0, 229, 255, 0.05);
+            border-color: var(--accent);
+            transform: scale(1.02);
+        }
+        .upload-area.dragover {
+            background: rgba(0, 229, 255, 0.1);
+            border-color: var(--accent);
+            box-shadow: 0 0 20px rgba(0,229,255,0.3);
+        }
+        .mode-selection {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            margin-top: 1rem;
+        }
+        .radio-card {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .radio-card:hover {
+            border-color: rgba(0, 229, 255, 0.3);
+            background: rgba(0, 229, 255, 0.02);
+        }
+        .radio-card input[type="radio"] {
+            display: none;
+        }
+        .radio-card input[type="radio"]:checked + .radio-content {
+            color: var(--text);
+        }
+        .radio-card:has(input[type="radio"]:checked) {
+            border-color: var(--accent);
+            background: rgba(0, 229, 255, 0.05);
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.1);
+        }
+        .radio-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .radio-content .icon {
+            font-size: 2rem;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+        .radio-content h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        .radio-content p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+        .range-input-container {
+            margin-top: 1.5rem;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        #rangeInput {
+            width: 100%;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 1rem;
+        }
+        #rangeInput:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(0, 229, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="background-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar glass-panel">
+            <div class="logo">
+                <span class="material-symbols-outlined logo-icon">auto_awesome_mosaic</span>
+                <h2>Tools Kepegawaian</h2>
+            </div>
+            
+            <nav class="menu">
+                <a href="index.html" class="menu-item">
+                    <span class="material-symbols-outlined icon">calculate</span>
+                    <span class="text">Kalkulasi Masa Kerja</span>
+                </a>
+                <a href="compress-pdf.html" class="menu-item">
+                    <span class="material-symbols-outlined icon">picture_as_pdf</span>
+                    <span class="text">Kompres PDF</span>
+                </a>
+                <a href="merge-pdf.html" class="menu-item">
+                    <span class="material-symbols-outlined icon">library_add</span>
+                    <span class="text">Merge PDF</span>
+                </a>
+                <a href="#" class="menu-item active">
+                    <span class="material-symbols-outlined icon">vertical_split</span>
+                    <span class="text">Split PDF</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-panel glass-panel">
+            <header class="top-bar">
+                <div class="page-title">
+                    <h1>Split PDF</h1>
+                    <p class="subtitle">Pisahkan halaman dokumen PDF menjadi file terpisah atau ambil halaman tertentu.</p>
+                </div>
+            </header>
+            
+            <section class="content-area">
+                <!-- Upload Area -->
+                <div class="card glass-card full-width" style="padding: 2.5rem;">
+                    
+                    <div id="dropZone" class="upload-area glass-panel" style="border: 2px dashed rgba(0, 229, 255, 0.4); padding: 4rem 2rem; text-align: center; cursor: pointer; transition: all 0.3s ease; border-radius: 16px; margin-bottom: 2rem; position: relative;">
+                        <input type="file" id="fileInput" accept=".pdf" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; opacity: 0; cursor: pointer;">
+                        <span class="material-symbols-outlined" style="font-size: 4rem; color: var(--accent); margin-bottom: 1rem; display: block; filter: drop-shadow(0 0 10px rgba(0,229,255,0.3));">upload_file</span>
+                        <h4 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem;" id="uploadTitle">Klik atau Tarik File PDF ke sini</h4>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;" id="uploadSubtitle">Pilih 1 file PDF yang ingin Anda pisahkan halamannya.</p>
+                    </div>
+
+                    <!-- Options Area (Hidden by default) -->
+                    <div id="optionsArea" style="display: none; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <h3 style="font-size: 1.3rem; margin-bottom: 0.5rem;">Opsi Pemisahan</h3>
+                        <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1rem;">
+                            File: <strong id="selectedFileName" style="color: var(--text);">document.pdf</strong> (<span id="selectedFilePages">0</span> halaman)
+                        </p>
+                        
+                        <div class="mode-selection">
+                            <label class="radio-card">
+                                <input type="radio" name="splitMode" value="range" checked>
+                                <div class="radio-content">
+                                    <span class="material-symbols-outlined icon">edit_document</span>
+                                    <h4>Ekstrak Rentang</h4>
+                                    <p>Pilih halaman tertentu untuk disatukan menjadi 1 file PDF baru.</p>
+                                </div>
+                            </label>
+                            
+                            <label class="radio-card">
+                                <input type="radio" name="splitMode" value="all">
+                                <div class="radio-content">
+                                    <span class="material-symbols-outlined icon">grid_view</span>
+                                    <h4>Pecah Semua</h4>
+                                    <p>Ekstrak setiap halaman menjadi file PDF terpisah (Diunduh dalam .zip).</p>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <div id="rangeInputContainer" class="range-input-container" style="display: block;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Rentang Halaman</label>
+                            <input type="text" id="rangeInput" placeholder="Contoh: 1-5, 8, 11-13">
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">Gunakan tanda koma (,) untuk memisahkan dan strip (-) untuk rentang.</p>
+                        </div>
+                        
+                        <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                            <button id="btnSplit" class="btn btn-primary" style="flex: 1; padding: 1rem; font-size: 1.1rem;">
+                                <span class="material-symbols-outlined">cut</span> Eksekusi PDF
+                            </button>
+                            <button id="btnCancel" class="btn btn-secondary" style="padding: 1rem;">
+                                <span class="material-symbols-outlined">close</span> Batal
+                            </button>
+                        </div>
+                        
+                        <!-- Progress -->
+                        <div id="mainProgress" class="progress-container" style="display: none; margin-top: 2rem;">
+                            <div id="mainProgressFill" class="progress-bar-fill" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Result Area (Hidden by default) -->
+                    <div id="resultArea" style="display: none; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); text-align: center;">
+                        <div style="display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: rgba(0,230,118,0.1); color: var(--success); margin-bottom: 1rem;">
+                            <span class="material-symbols-outlined" style="font-size: 2.5rem;">check_circle</span>
+                        </div>
+                        <h3 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">Berhasil Diproses</h3>
+                        <p style="color: var(--text-muted); margin-bottom: 2rem;">File Anda telah berhasil dipisahkan dan siap diunduh.</p>
+                        <a id="btnDownloadResult" href="#" class="btn btn-primary" style="display: inline-flex; padding: 1rem 2rem;">
+                            <span class="material-symbols-outlined">download</span> Unduh Hasil
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <script>
+                const { PDFDocument } = PDFLib;
+                
+                const dropZone = document.getElementById('dropZone');
+                const fileInput = document.getElementById('fileInput');
+                const uploadTitle = document.getElementById('uploadTitle');
+                const uploadSubtitle = document.getElementById('uploadSubtitle');
+                
+                const optionsArea = document.getElementById('optionsArea');
+                const selectedFileName = document.getElementById('selectedFileName');
+                const selectedFilePages = document.getElementById('selectedFilePages');
+                const rangeInputContainer = document.getElementById('rangeInputContainer');
+                const rangeInput = document.getElementById('rangeInput');
+                
+                const btnSplit = document.getElementById('btnSplit');
+                const btnCancel = document.getElementById('btnCancel');
+                const mainProgress = document.getElementById('mainProgress');
+                const mainProgressFill = document.getElementById('mainProgressFill');
+                
+                const resultArea = document.getElementById('resultArea');
+                const btnDownloadResult = document.getElementById('btnDownloadResult');
+                
+                let currentFile = null;
+                let totalPages = 0;
+
+                // Handle Drag & Drop
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, preventDefaults, false);
+                });
+
+                function preventDefaults(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'));
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'));
+                });
+
+                dropZone.addEventListener('drop', (e) => {
+                    handleFile(e.dataTransfer.files[0]);
+                });
+
+                fileInput.addEventListener('change', function() {
+                    if (this.files.length > 0) handleFile(this.files[0]);
+                });
+
+                async function handleFile(file) {
+                    if (!file || file.type !== 'application/pdf') {
+                        alert('Silakan pilih file PDF yang valid.');
+                        return;
+                    }
+                    
+                    uploadTitle.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite; font-size:1.5rem; vertical-align:middle;">hourglass_empty</span> Membaca File...';
+                    uploadSubtitle.style.display = 'none';
+                    dropZone.style.pointerEvents = 'none';
+                    
+                    try {
+                        const arrayBuffer = await file.arrayBuffer();
+                        const pdfDoc = await PDFDocument.load(arrayBuffer);
+                        totalPages = pdfDoc.getPageCount();
+                        
+                        currentFile = file;
+                        selectedFileName.textContent = file.name;
+                        selectedFilePages.textContent = totalPages;
+                        
+                        dropZone.style.display = 'none';
+                        optionsArea.style.display = 'block';
+                        resultArea.style.display = 'none';
+                        
+                    } catch (err) {
+                        console.error(err);
+                        alert('Gagal membaca PDF. File mungkin rusak atau dilindungi password.');
+                    } finally {
+                        uploadTitle.innerHTML = 'Klik atau Tarik File PDF ke sini';
+                        uploadSubtitle.style.display = 'block';
+                        dropZone.style.pointerEvents = 'auto';
+                        fileInput.value = ''; // reset
+                    }
+                }
+
+                // Handle Radio Buttons Toggle
+                const radios = document.querySelectorAll('input[name="splitMode"]');
+                radios.forEach(radio => {
+                    radio.addEventListener('change', (e) => {
+                        if (e.target.value === 'range') {
+                            rangeInputContainer.style.display = 'block';
+                        } else {
+                            rangeInputContainer.style.display = 'none';
+                        }
+                    });
+                });
+
+                // Cancel Button
+                btnCancel.addEventListener('click', () => {
+                    currentFile = null;
+                    totalPages = 0;
+                    dropZone.style.display = 'block';
+                    optionsArea.style.display = 'none';
+                    resultArea.style.display = 'none';
+                    rangeInput.value = '';
+                });
+
+                // Parse Range String e.g. "1-3, 5, 8-10"
+                function parseRange(text, maxPages) {
+                    const indices = [];
+                    const parts = text.split(',');
+                    
+                    for (let part of parts) {
+                        part = part.trim();
+                        if (!part) continue;
+                        
+                        if (part.includes('-')) {
+                            const [startStr, endStr] = part.split('-');
+                            const start = parseInt(startStr);
+                            const end = parseInt(endStr);
+                            
+                            if (!isNaN(start) && !isNaN(end) && start > 0 && end >= start && end <= maxPages) {
+                                for (let i = start; i <= end; i++) {
+                                    indices.push(i - 1); // 0-indexed for pdf-lib
+                                }
+                            }
+                        } else {
+                            const num = parseInt(part);
+                            if (!isNaN(num) && num > 0 && num <= maxPages) {
+                                indices.push(num - 1);
+                            }
+                        }
+                    }
+                    return [...new Set(indices)].sort((a,b) => a-b); // unique and sorted
+                }
+
+                // Split Processing
+                btnSplit.addEventListener('click', async () => {
+                    if (!currentFile) return;
+                    
+                    const mode = document.querySelector('input[name="splitMode"]:checked').value;
+                    let pageIndices = [];
+                    
+                    if (mode === 'range') {
+                        const rangeText = rangeInput.value;
+                        pageIndices = parseRange(rangeText, totalPages);
+                        
+                        if (pageIndices.length === 0) {
+                            alert(`Format rentang salah. Masukkan rentang yang valid antara 1 sampai ${totalPages}.`);
+                            return;
+                        }
+                    } else {
+                        // All pages
+                        for (let i = 0; i < totalPages; i++) pageIndices.push(i);
+                    }
+                    
+                    btnSplit.disabled = true;
+                    btnSplit.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">hourglass_empty</span> <span>Memproses...</span>';
+                    mainProgress.style.display = 'block';
+                    mainProgressFill.style.width = '10%';
+                    
+                    try {
+                        const arrayBuffer = await currentFile.arrayBuffer();
+                        const originalPdf = await PDFDocument.load(arrayBuffer);
+                        
+                        if (mode === 'range') {
+                            mainProgressFill.style.width = '50%';
+                            const newPdf = await PDFDocument.create();
+                            const copiedPages = await newPdf.copyPages(originalPdf, pageIndices);
+                            
+                            copiedPages.forEach(page => newPdf.addPage(page));
+                            
+                            const pdfBytes = await newPdf.save();
+                            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                            
+                            mainProgressFill.style.width = '100%';
+                            setupDownload(blob, `extracted-${currentFile.name}`);
+                            
+                        } else if (mode === 'all') {
+                            const zip = new JSZip();
+                            
+                            for (let i = 0; i < totalPages; i++) {
+                                const newPdf = await PDFDocument.create();
+                                const [copiedPage] = await newPdf.copyPages(originalPdf, [i]);
+                                newPdf.addPage(copiedPage);
+                                
+                                const pdfBytes = await newPdf.save();
+                                zip.file(`page-${i + 1}.pdf`, pdfBytes);
+                                
+                                mainProgressFill.style.width = Math.floor(10 + ((i / totalPages) * 80)) + '%';
+                            }
+                            
+                            mainProgressFill.style.width = '95%';
+                            const zipBlob = await zip.generateAsync({ type: "blob" });
+                            
+                            mainProgressFill.style.width = '100%';
+                            setupDownload(zipBlob, `split-${currentFile.name.replace('.pdf', '')}.zip`);
+                        }
+                        
+                    } catch (error) {
+                        console.error('Error during split:', error);
+                        alert('Terjadi kesalahan saat memproses PDF.');
+                    } finally {
+                        btnSplit.disabled = false;
+                        btnSplit.innerHTML = '<span class="material-symbols-outlined">cut</span> Eksekusi PDF';
+                    }
+                });
+                
+                function setupDownload(blob, filename) {
+                    const url = window.URL.createObjectURL(blob);
+                    btnDownloadResult.href = url;
+                    btnDownloadResult.download = filename;
+                    
+                    optionsArea.style.display = 'none';
+                    resultArea.style.display = 'block';
+                    mainProgress.style.display = 'none';
+                    mainProgressFill.style.width = '0%';
+                }
+            </script>
+            <style>
+                @keyframes spin {
+                    100% { transform: rotate(360deg); }
+                }
+            </style>
+        </main>
+    </div>
+</body>
+</html>

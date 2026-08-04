@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tools Kepegawaian - Kalkulasi Masa Kerja</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar glass-panel">
+            <div class="logo">
+                <span class="material-symbols-outlined logo-icon">auto_awesome_mosaic</span>
+                <h2>Tools Kepegawaian</h2>
+            </div>
+            
+            <nav class="menu">
+
+                <a href="#" class="menu-item active">
+                    <span class="material-symbols-outlined icon">calculate</span>
+                    <span class="text">Kalkulasi Masa Kerja</span>
+                </a>
+                <a href="compress-pdf.html" class="menu-item">
+                    <span class="material-symbols-outlined icon">picture_as_pdf</span>
+                    <span class="text">Kompres PDF</span>
+                </a>
+                <a href="merge-pdf.html" class="menu-item">
+                    <span class="material-symbols-outlined icon">library_add</span>
+                    <span class="text">Merge PDF</span>
+                </a>
+
+            </nav>
+            
+            <div class="user-profile glass-card">
+                <img src="https://ui-avatars.com/api/?name=Admin+Kemenag&background=0D8ABC&color=fff&rounded=true" alt="User Avatar" class="avatar">
+                <div class="user-info">
+                    <h4>Admin User</h4>
+                    <p>admin@kemenag.go.id</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-panel glass-panel">
+            <header class="top-bar">
+                <div class="page-title">
+                    <h1>Kalkulasi Masa Kerja</h1>
+                    <p class="subtitle">Kelola dan proses perhitungan masa kerja pegawai</p>
+                </div>
+            </header>
+            
+            <section class="content-area">
+                <!-- Form Area -->
+                <div class="card glass-card full-width" style="padding: 2.5rem;">
+                    <div class="card-header" style="margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">
+                        <h3 style="font-size: 1.5rem; display: flex; align-items: center; gap: 0.8rem;">
+                            <span class="material-symbols-outlined text-accent" style="font-size: 2rem;">calculate</span> 
+                            Kalkulator Hitung Masa Kerja
+                        </h3>
+                        <p class="subtitle" style="margin-top: 0.5rem; color: var(--text-muted);">Masukkan parameter masa kerja untuk mendapatkan TMT Dasar Fiktif dan total masa kerja yang akurat.</p>
+                    </div>
+                    <form id="kalkulatorForm" class="glass-form premium-form">
+                        
+                        <!-- Row 1: Dates -->
+                        <div class="form-section">
+                            <h4 class="section-title"><span class="material-symbols-outlined">event</span> Informasi Tanggal</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>TMT CPNS/PNS</label>
+                                    <input type="date" id="tanggal_awal_hitung" required class="glass-input-field date-input">
+                                </div>
+                                <div class="form-group">
+                                    <label>Tanggal Akhir (Batas Hitung)</label>
+                                    <input type="date" id="tanggal_akhir" required class="glass-input-field date-input">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Masa Kerja & PMK -->
+                        <div class="form-row split-row">
+                            <div class="form-section">
+                                <h4 class="section-title"><span class="material-symbols-outlined">history</span> Masa Kerja Lama</h4>
+                                <div class="form-row inner-row">
+                                    <div class="form-group">
+                                        <label>Tahun</label>
+                                        <input type="number" id="mk_tahun" value="0" min="0" required class="glass-input-field">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Bulan</label>
+                                        <input type="number" id="mk_bulan" value="0" min="0" required class="glass-input-field">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-section">
+                                <h4 class="section-title"><span class="material-symbols-outlined">update</span> Peninjauan (PMK)</h4>
+                                <div class="form-row inner-row">
+                                    <div class="form-group">
+                                        <label>Tahun</label>
+                                        <input type="number" id="pmk_tahun" value="0" min="0" required class="glass-input-field">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Bulan</label>
+                                        <input type="number" id="pmk_bulan" value="0" min="0" required class="glass-input-field">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 3: Pengurangan & Submit -->
+                        <div class="form-row align-end" style="margin-top: 1rem;">
+                            <div class="form-section flex-grow">
+                                <h4 class="section-title"><span class="material-symbols-outlined">remove_circle_outline</span> Pengurangan MK</h4>
+                                <div class="form-group" style="max-width: 200px;">
+                                    <label>Total Tahun</label>
+                                    <input type="number" id="pengurangan_mk" value="0" min="0" required class="glass-input-field">
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn-primary glass-btn large-btn" style="padding: 1rem 2rem; font-size: 1.1rem; border-radius: 12px;">
+                                    <span class="material-symbols-outlined">bolt</span> 
+                                    <span>Kalkulasi Sekarang</span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Result Area -->
+                <div class="card glass-card result-card full-width" id="resultContainer" style="display: none; margin-top: 2rem; padding: 2.5rem; background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.3); box-shadow: 0 0 30px rgba(0,229,255,0.1);">
+                    <div class="result-header" style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem;">
+                        <div class="result-icon-wrapper success-glow" style="width: 60px; height: 60px; background: rgba(0,230,118,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--success); box-shadow: 0 0 20px rgba(0,230,118,0.4);">
+                            <span class="material-symbols-outlined" style="font-size: 2.5rem;">check_circle</span>
+                        </div>
+                        <div>
+                            <h3 class="result-title" style="font-size: 1.5rem; font-weight: 700;">Kalkulasi Berhasil</h3>
+                            <p class="result-subtitle" style="color: var(--text-secondary); margin-top: 0.3rem;">Perhitungan otomatis memecahkan masa kerja dengan presisi.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="result-data-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem;">
+                        <div class="data-item" style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
+                            <span class="data-label" style="display: block; font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.5rem;">TMT Dasar Fiktif</span>
+                            <span class="data-value text-accent" id="res_tmt_dasar" style="font-size: 2rem; font-weight: 700; letter-spacing: 1px;">-</span>
+                        </div>
+                        <div class="data-item highlight" style="background: linear-gradient(135deg, rgba(0,230,118,0.1), rgba(0,230,118,0.05)); padding: 1.5rem; border-radius: 16px; border: 1px solid rgba(0,230,118,0.3);">
+                            <span class="data-label" style="display: block; font-size: 0.9rem; color: var(--success); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.5rem;">Total Masa Kerja Pegawai</span>
+                            <span class="data-value text-success" id="res_string" style="font-size: 2.2rem; font-weight: 800; display: block; margin-bottom: 0.5rem; text-shadow: 0 0 15px rgba(0,230,118,0.5);"></span>
+                            <span class="data-subvalue" id="res_detail" style="font-size: 1rem; color: rgba(255,255,255,0.7);"></span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <script>
+                document.getElementById('kalkulatorForm').addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    try {
+                        const tmtAwalStr = document.getElementById('tanggal_awal_hitung').value;
+                        const tglAkhirStr = document.getElementById('tanggal_akhir').value;
+                        
+                        if (!tmtAwalStr || !tglAkhirStr) {
+                            alert('TMT Awal dan Tanggal Akhir harus diisi.');
+                            return;
+                        }
+
+                        const mkTahun = parseInt(document.getElementById('mk_tahun').value) || 0;
+                        const mkBulan = parseInt(document.getElementById('mk_bulan').value) || 0;
+                        const pmkTahun = parseInt(document.getElementById('pmk_tahun').value) || 0;
+                        const pmkBulan = parseInt(document.getElementById('pmk_bulan').value) || 0;
+                        const pengurangMk = parseInt(document.getElementById('pengurangan_mk').value) || 0;
+
+                        // 1. TMT Dasar
+                        // JS Date constructor handles YYYY-MM-DD correctly
+                        let tmtDasar = new Date(tmtAwalStr);
+                        
+                        let tahunPengurang = mkTahun + pmkTahun - pengurangMk;
+                        let bulanPengurang = mkBulan + pmkBulan;
+                        
+                        // JS natively handles rollover automatically (e.g. Month -5 goes to previous year)
+                        tmtDasar.setFullYear(tmtDasar.getFullYear() - tahunPengurang);
+                        tmtDasar.setMonth(tmtDasar.getMonth() - bulanPengurang);
+                        
+                        // Format output YYYY-MM-DD
+                        const yyyy = tmtDasar.getFullYear();
+                        const mm = String(tmtDasar.getMonth() + 1).padStart(2, '0');
+                        const dd = String(tmtDasar.getDate()).padStart(2, '0');
+                        const tmtDasarFormatted = `${yyyy}-${mm}-${dd}`;
+
+                        // 2. Selisih dengan Tanggal Akhir
+                        let tglAkhir = new Date(tglAkhirStr);
+                        
+                        let years = tglAkhir.getFullYear() - tmtDasar.getFullYear();
+                        let months = tglAkhir.getMonth() - tmtDasar.getMonth();
+                        let days = tglAkhir.getDate() - tmtDasar.getDate();
+
+                        if (days < 0) {
+                            months--;
+                            // Get days in the previous month of the end date
+                            let previousMonth = new Date(tglAkhir.getFullYear(), tglAkhir.getMonth(), 0);
+                            days += previousMonth.getDate();
+                        }
+
+                        if (months < 0) {
+                            years--;
+                            months += 12;
+                        }
+
+                        // 3. Tampilkan Hasil
+                        document.getElementById('resultContainer').style.display = 'block';
+                        document.getElementById('res_tmt_dasar').innerText = tmtDasarFormatted;
+                        document.getElementById('res_string').innerText = `${years} Tahun ${months} Bulan ${days} Hari`;
+                        document.getElementById('res_detail').innerText = `Dihitung hingga ${tglAkhirStr}`;
+                        
+                        // Optional scroll to result
+                        document.getElementById('resultContainer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        
+                    } catch (err) {
+                        alert("Terjadi kesalahan pada perhitungan.");
+                        console.error(err);
+                    }
+                });
+            </script>
+        </main>
+    </div>
+</body>
+</html>

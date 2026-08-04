@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tools Kepegawaian - Kompres PDF</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .upload-area:hover {
+            background: rgba(0, 229, 255, 0.05);
+            border-color: var(--accent);
+            transform: scale(1.02);
+        }
+        .upload-area.dragover {
+            background: rgba(0, 229, 255, 0.1);
+            border-color: var(--accent);
+            box-shadow: 0 0 20px rgba(0,229,255,0.3);
+        }
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(0,0,0,0.2);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .file-icon {
+            color: var(--danger);
+            font-size: 2rem;
+        }
+        .file-details h5 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.2rem;
+            word-break: break-all;
+        }
+        .file-details p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .remove-file {
+            background: rgba(255, 23, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(255, 23, 68, 0.3);
+            border-radius: 8px;
+            padding: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .remove-file:hover {
+            background: var(--danger);
+            color: white;
+        }
+        .progress-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin-top: 0.8rem;
+            overflow: hidden;
+            display: none;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--accent);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .btn-download {
+            background: rgba(0, 230, 118, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(0, 230, 118, 0.4);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        .btn-download:hover {
+            background: var(--success);
+            color: var(--bg-primary);
+            box-shadow: 0 0 15px rgba(0,230,118,0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="background-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar glass-panel">
+            <div class="logo">
+                <span class="material-symbols-outlined logo-icon">auto_awesome_mosaic</span>
+                <h2>Tools Kepegawaian</h2>
+            </div>
+            
+            <nav class="menu">
+
+                <a href="index.html" class="menu-item">
+                    <span class="material-symbols-outlined icon">calculate</span>
+                    <span class="text">Kalkulasi Masa Kerja</span>
+                </a>
+                <a href="#" class="menu-item active">
+                    <span class="material-symbols-outlined icon">picture_as_pdf</span>
+                    <span class="text">Kompres PDF</span>
+                </a>
+                <a href="merge-pdf.html" class="menu-item">
+                    <span class="material-symbols-outlined icon">library_add</span>
+                    <span class="text">Merge PDF</span>
+                </a>
+
+            </nav>
+            
+            <div class="user-profile glass-card">
+                <img src="https://ui-avatars.com/api/?name=Admin+Kemenag&background=0D8ABC&color=fff&rounded=true" alt="User Avatar" class="avatar">
+                <div class="user-info">
+                    <h4>Admin User</h4>
+                    <p>admin@kemenag.go.id</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-panel glass-panel">
+            <header class="top-bar">
+                <div class="page-title">
+                    <h1>Kompres PDF</h1>
+                    <p class="subtitle">Perkecil ukuran file PDF Anda agar tidak lebih dari 500KB</p>
+                </div>
+            </header>
+            
+            <section class="content-area">
+                <!-- Upload Area -->
+                <div class="card glass-card full-width" style="padding: 2.5rem;">
+                    <div class="card-header" style="margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">
+                        <h3 style="font-size: 1.5rem; display: flex; align-items: center; gap: 0.8rem;">
+                            <span class="material-symbols-outlined text-accent" style="font-size: 2rem;">compress</span> 
+                            Alat Kompresi PDF (Multi-File)
+                        </h3>
+                        <p class="subtitle" style="margin-top: 0.5rem; color: var(--text-muted);">Pilih atau tarik beberapa file PDF ke area di bawah ini. File akan diproses agar berukuran maksimal 500KB.</p>
+                    </div>
+
+                    <div id="dropZone" class="upload-area glass-panel" style="border: 2px dashed rgba(0, 229, 255, 0.4); padding: 4rem 2rem; text-align: center; cursor: pointer; transition: all 0.3s ease; border-radius: 16px; margin-bottom: 2rem; position: relative;">
+                        <input type="file" id="fileInput" multiple accept=".pdf" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; opacity: 0; cursor: pointer;">
+                        <span class="material-symbols-outlined" style="font-size: 4rem; color: var(--accent); margin-bottom: 1rem; display: block; filter: drop-shadow(0 0 10px rgba(0,229,255,0.3));">upload_file</span>
+                        <h4 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem;">Klik atau Tarik File PDF ke sini</h4>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">Maksimal ukuran target: 500KB per file. Anda dapat memilih beberapa file sekaligus.</p>
+                    </div>
+
+                    <div id="fileListContainer" style="display: none;">
+                        <h4 style="margin-bottom: 1rem; font-size: 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">File Terpilih:</h4>
+                        <div id="fileList" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2rem;">
+                            <!-- File items will be injected here -->
+                        </div>
+                        <div class="form-actions" style="display: flex; justify-content: flex-end;">
+                            <button id="btnCompress" class="btn-primary glass-btn large-btn" style="padding: 1rem 2rem; font-size: 1.1rem; border-radius: 12px; max-width: 250px;">
+                                <span class="material-symbols-outlined">auto_fix_high</span> 
+                                <span>Mulai Kompresi</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Result Area -->
+                <div class="card glass-card result-card full-width" id="resultContainer" style="display: none; margin-top: 2rem; padding: 2.5rem; background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.3); box-shadow: 0 0 30px rgba(0,229,255,0.1);">
+                    <div class="result-header" style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem;">
+                        <div class="result-icon-wrapper success-glow" style="width: 60px; height: 60px; background: rgba(0,230,118,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--success); box-shadow: 0 0 20px rgba(0,230,118,0.4);">
+                            <span class="material-symbols-outlined" style="font-size: 2.5rem;">check_circle</span>
+                        </div>
+                        <div>
+                            <h3 class="result-title" style="font-size: 1.5rem; font-weight: 700;">Kompresi Selesai</h3>
+                            <p class="result-subtitle" style="color: var(--text-secondary); margin-top: 0.3rem;">Semua file berhasil dikompresi di bawah 500KB.</p>
+                        </div>
+                    </div>
+                    
+                    <div id="resultList" style="display: flex; flex-direction: column; gap: 1rem;">
+                        <!-- Compressed files result injected here -->
+                    </div>
+                </div>
+            </section>
+
+            <script>
+                const dropZone = document.getElementById('dropZone');
+                const fileInput = document.getElementById('fileInput');
+                const fileListContainer = document.getElementById('fileListContainer');
+                const fileList = document.getElementById('fileList');
+                const btnCompress = document.getElementById('btnCompress');
+                const resultContainer = document.getElementById('resultContainer');
+                const resultList = document.getElementById('resultList');
+                
+                let selectedFiles = [];
+
+                // Format Bytes
+                function formatBytes(bytes, decimals = 2) {
+                    if (bytes === 0) return '0 Bytes';
+                    const k = 1024;
+                    const dm = decimals < 0 ? 0 : decimals;
+                    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+                    const i = Math.floor(Math.log(bytes) / Math.log(k));
+                    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+                }
+
+                // Handle Drag & Drop
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, preventDefaults, false);
+                });
+
+                function preventDefaults(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, () => {
+                        dropZone.classList.add('dragover');
+                    });
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, () => {
+                        dropZone.classList.remove('dragover');
+                    });
+                });
+
+                dropZone.addEventListener('drop', (e) => {
+                    const dt = e.dataTransfer;
+                    const files = dt.files;
+                    handleFiles(files);
+                });
+
+                fileInput.addEventListener('change', function() {
+                    handleFiles(this.files);
+                });
+
+                function handleFiles(files) {
+                    const newFiles = Array.from(files).filter(file => file.type === 'application/pdf');
+                    
+                    if (newFiles.length !== files.length) {
+                        alert('Beberapa file diabaikan karena bukan format PDF.');
+                    }
+                    
+                    selectedFiles = [...selectedFiles, ...newFiles];
+                    renderFileList();
+                }
+
+                function removeFile(index) {
+                    selectedFiles.splice(index, 1);
+                    renderFileList();
+                }
+
+                function renderFileList() {
+                    fileList.innerHTML = '';
+                    
+                    if (selectedFiles.length > 0) {
+                        fileListContainer.style.display = 'block';
+                        resultContainer.style.display = 'none'; // hide previous results
+                        
+                        selectedFiles.forEach((file, index) => {
+                            const fileItem = document.createElement('div');
+                            fileItem.className = 'file-item';
+                            fileItem.innerHTML = `
+                                <div class="file-info">
+                                    <span class="material-symbols-outlined file-icon">picture_as_pdf</span>
+                                    <div class="file-details">
+                                        <h5>${file.name}</h5>
+                                        <p>Ukuran Asli: ${formatBytes(file.size)}</p>
+                                        <div class="progress-container" id="progress-${index}">
+                                            <div class="progress-bar-fill" id="progress-fill-${index}"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="remove-file" onclick="removeFile(${index})" title="Hapus">
+                                    <span class="material-symbols-outlined">delete</span>
+                                </button>
+                            `;
+                            fileList.appendChild(fileItem);
+                        });
+                    } else {
+                        fileListContainer.style.display = 'none';
+                        // reset file input
+                        fileInput.value = '';
+                    }
+                }
+
+                // Process Compression via API
+                btnCompress.addEventListener('click', async () => {
+                    if (selectedFiles.length === 0) return;
+                    
+                    btnCompress.disabled = true;
+                    btnCompress.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">hourglass_empty</span> <span>Memproses...</span>';
+                    
+                    document.querySelectorAll('.progress-container').forEach(el => el.style.display = 'block');
+                    document.querySelectorAll('.remove-file').forEach(el => el.style.display = 'none');
+                    
+                    let completedCount = 0;
+                    resultList.innerHTML = '';
+                    
+                    // Use Promise.all to process in parallel
+                    await Promise.all(selectedFiles.map(async (file, index) => {
+                        const progressFill = document.getElementById(`progress-fill-${index}`);
+                        progressFill.style.width = '50%'; // Indicate uploading
+
+                        const formData = new FormData();
+                        formData.append('files', file);
+
+                        try {
+                            const response = await fetch('/api/compress-pdf', {
+                                method: 'POST',
+                                body: formData
+                            });
+
+                            if (!response.ok) throw new Error('Network response was not ok');
+
+                            progressFill.style.width = '100%'; // Indicate done
+                            
+                            const blob = await response.blob();
+                            const downloadUrl = window.URL.createObjectURL(blob);
+                            const compressedSize = blob.size;
+                            
+                            completedCount++;
+
+                            const resItem = document.createElement('div');
+                            resItem.className = 'file-item';
+                            resItem.style.background = 'rgba(0, 230, 118, 0.05)';
+                            resItem.style.borderColor = 'rgba(0, 230, 118, 0.2)';
+                            resItem.innerHTML = `
+                                <div class="file-info">
+                                    <span class="material-symbols-outlined file-icon" style="color: var(--success);">task_alt</span>
+                                    <div class="file-details">
+                                        <h5>${file.name}</h5>
+                                        <p style="color: var(--success);">
+                                            <del style="color: var(--text-muted); margin-right: 8px;">${formatBytes(file.size)}</del> 
+                                            <strong>${formatBytes(compressedSize)}</strong>
+                                        </p>
+                                    </div>
+                                </div>
+                                <a href="${downloadUrl}" download="compressed-${file.name}" class="btn-download">
+                                    <span class="material-symbols-outlined">download</span> Unduh
+                                </a>
+                            `;
+                            resultList.appendChild(resItem);
+                        } catch (error) {
+                            console.error('Error compressing file', file.name, error);
+                            progressFill.style.background = 'var(--danger)';
+                        }
+                    }));
+
+                    // All files completed
+                    setTimeout(() => {
+                        fileListContainer.style.display = 'none';
+                        resultContainer.style.display = 'block';
+                        resultContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        
+                        selectedFiles = [];
+                        fileInput.value = '';
+                        btnCompress.disabled = false;
+                        btnCompress.innerHTML = '<span class="material-symbols-outlined">auto_fix_high</span> <span>Mulai Kompresi</span>';
+                    }, 500);
+                });
+            </script>
+            
+            <style>
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            </style>
+        </main>
+    </div>
+</body>
+</html>

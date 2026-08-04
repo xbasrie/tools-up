@@ -10,6 +10,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Material Symbols -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <!-- PDF Libraries for Client-Side Compression -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
     <style>
@@ -309,30 +312,84 @@
                     document.querySelectorAll('.progress-container').forEach(el => el.style.display = 'block');
                     document.querySelectorAll('.remove-file').forEach(el => el.style.display = 'none');
                     
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+                    const { jsPDF } = window.jspdf;
+
+                    async function clientCompressPDF(file, updateProgress) {
+                        const targetSize = 499 * 1024;
+                        const arrayBuffer = await file.arrayBuffer();
+                        const pdfDoc = await pdfjsLib.getDocument(arrayBuffer).promise;
+                        const numPages = pdfDoc.numPages;
+
+                        let quality = 0.8;
+                        let scale = 2.0; 
+                        let blob = null;
+                        let attempts = 0;
+                        
+                        updateProgress('20%');
+
+                        while (attempts < 5) {
+                            const newPdf = new jsPDF('p', 'pt', 'a4');
+                            
+                            for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+                                const page = await pdfDoc.getPage(pageNum);
+                                const viewport = page.getViewport({ scale: scale });
+                                
+                                const canvas = document.createElement('canvas');
+                                const ctx = canvas.getContext('2d');
+                                canvas.height = viewport.height;
+                                canvas.width = viewport.width;
+
+                                await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+                                const imgData = canvas.toDataURL('image/jpeg', quality);
+
+                                const pdfWidth = newPdf.internal.pageSize.getWidth();
+                                const pdfHeight = (viewport.height * pdfWidth) / viewport.width;
+
+                                if (pageNum > 1) {
+                                    newPdf.addPage();
+                                }
+                                newPdf.setPage(pageNum);
+                                newPdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                                
+                                updateProgress(Math.floor(20 + ((pageNum / numPages) * 50)) + '%');
+                            }
+
+                            blob = newPdf.output('blob');
+                            
+                            if (blob.size <= targetSize) {
+                                break; // Target reached
+                            } else {
+                                quality -= 0.2;
+                                scale -= 0.4;
+                                if (quality < 0.2) quality = 0.2;
+                                if (scale < 0.8) scale = 0.8;
+                                attempts++;
+                            }
+                        }
+                        
+                        return blob;
+                    }
+
                     let completedCount = 0;
                     resultList.innerHTML = '';
                     
-                    // Use Promise.all to process in parallel
-                    await Promise.all(selectedFiles.map(async (file, index) => {
+                    // Process files sequentially to avoid freezing browser UI with heavy canvas tasks
+                    for (let index = 0; index < selectedFiles.length; index++) {
+                        const file = selectedFiles[index];
                         const progressFill = document.getElementById(`progress-fill-${index}`);
-                        progressFill.style.width = '50%'; // Indicate uploading
-
-                        const formData = new FormData();
-                        formData.append('files', file);
+                        progressFill.style.width = '10%'; 
 
                         try {
-                            const response = await fetch('/api/compress-pdf', {
-                                method: 'POST',
-                                body: formData
+                            const compressedBlob = await clientCompressPDF(file, (prog) => {
+                                progressFill.style.width = prog;
                             });
 
-                            if (!response.ok) throw new Error('Network response was not ok');
-
-                            progressFill.style.width = '100%'; // Indicate done
+                            progressFill.style.width = '100%';
                             
-                            const blob = await response.blob();
-                            const downloadUrl = window.URL.createObjectURL(blob);
-                            const compressedSize = blob.size;
+                            const downloadUrl = window.URL.createObjectURL(compressedBlob);
+                            const compressedSize = compressedBlob.size;
                             
                             completedCount++;
 
@@ -360,7 +417,7 @@
                             console.error('Error compressing file', file.name, error);
                             progressFill.style.background = 'var(--danger)';
                         }
-                    }));
+                    }
 
                     // All files completed
                     setTimeout(() => {

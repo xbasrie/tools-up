@@ -215,6 +215,34 @@ body {
     color: var(--accent);
 }
 
+.menu-group {
+    display: flex;
+    flex-direction: column;
+}
+.parent-menu {
+    cursor: pointer;
+    justify-content: space-between;
+}
+.sub-menu {
+    display: none;
+    flex-direction: column;
+    padding-left: 1.5rem;
+    margin-top: 0.2rem;
+}
+.menu-group.open .sub-menu {
+    display: flex;
+}
+.menu-group.open .expand-icon {
+    transform: rotate(180deg);
+}
+.sub-menu .menu-item {
+    padding: 0.8rem 1rem;
+    font-size: 0.95rem;
+}
+.sub-menu .menu-item .icon {
+    font-size: 1.2rem;
+}
+
 .user-profile {
     display: flex;
     align-items: center;

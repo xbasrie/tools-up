@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tools Kepegawaian - Kalkulator Tanggal</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Tab Navigation Styles */
+        .tabs-container {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 1rem;
+            overflow-x: auto;
+        }
+        .tab-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-secondary);
+            padding: 0.8rem 1.5rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        .tab-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: var(--text-primary);
+        }
+        .tab-btn.active {
+            background: rgba(0, 229, 255, 0.15);
+            color: var(--accent);
+            border-color: rgba(0, 229, 255, 0.4);
+            box-shadow: 0 0 15px rgba(0,229,255,0.2);
+        }
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease forwards;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Checkbox Styles */
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            margin-top: 1rem;
+            background: rgba(0,0,0,0.15);
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            user-select: none;
+        }
+        .checkbox-label:hover {
+            color: var(--text-primary);
+        }
+        .checkbox-label input[type="checkbox"] {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 4px;
+            background: rgba(0,0,0,0.2);
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+        }
+        .checkbox-label input[type="checkbox"]:checked {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+        .checkbox-label input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            color: var(--bg-primary);
+            font-size: 14px;
+            font-weight: bold;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        /* Days Selection Grid */
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="background-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar glass-panel">
+            <div class="logo">
+                <span class="material-symbols-outlined logo-icon">auto_awesome_mosaic</span>
+                <h2>Tools Kepegawaian</h2>
+            </div>
+            
+            <nav class="menu">
+                <a href="index.html" class="menu-item">
+                    <span class="material-symbols-outlined icon">calculate</span>
+                    <span class="text">Kalkulasi Masa Kerja</span>
+                </a>
+                <a href="kalkulator-tanggal.html" class="menu-item active">
+                    <span class="material-symbols-outlined icon">event_note</span>
+                    <span class="text">Kalkulator Tanggal</span>
+                </a>
+                <div class="menu-group">
+                    <div class="menu-item parent-menu" onclick="this.parentElement.classList.toggle('open')">
+                        <div style="display: flex; align-items: center; gap: 1.2rem;">
+                            <span class="material-symbols-outlined icon">picture_as_pdf</span>
+                            <span class="text">Alat PDF</span>
+                        </div>
+                        <span class="material-symbols-outlined expand-icon" style="font-size: 1.2rem; transition: transform 0.3s;">expand_more</span>
+                    </div>
+                    <div class="sub-menu">
+                        <a href="compress-pdf.html" class="menu-item">
+                            <span class="material-symbols-outlined icon">compress</span>
+                            <span class="text">Kompres PDF</span>
+                        </a>
+                        <a href="merge-pdf.html" class="menu-item">
+                            <span class="material-symbols-outlined icon">library_add</span>
+                            <span class="text">Merge PDF</span>
+                        </a>
+                        <a href="split-pdf.html" class="menu-item">
+                            <span class="material-symbols-outlined icon">vertical_split</span>
+                            <span class="text">Split PDF</span>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-panel glass-panel">
+            <header class="top-bar">
+                <div class="page-title">
+                    <h1>Kalkulator Tanggal</h1>
+                    <p class="subtitle">Hitung selisih hari, tambah, atau kurangi tanggal dengan pengaturan hari libur</p>
+                </div>
+            </header>
+            
+            <section class="content-area">
+                <div class="card glass-card full-width" style="padding: 2.5rem;">
+                    
+                    <!-- Tabs -->
+                    <div class="tabs-container">
+                        <button class="tab-btn active" onclick="openTab('tab-selisih', this)">
+                            <span class="material-symbols-outlined">date_range</span> Menghitung Hari
+                        </button>
+                        <button class="tab-btn" onclick="openTab('tab-tambah', this)">
+                            <span class="material-symbols-outlined">event_available</span> Menambah Hari
+                        </button>
+                        <button class="tab-btn" onclick="openTab('tab-kurang', this)">
+                            <span class="material-symbols-outlined">event_busy</span> Mengurangi Hari
+                        </button>
+                    </div>
+
+                    <!-- TAB 1: Menghitung Hari (Selisih) -->
+                    <div id="tab-selisih" class="tab-content active">
+                        <form id="form-selisih" class="glass-form premium-form">
+                            <div class="form-row split-row">
+                                <div class="form-group">
+                                    <label>Tanggal Awal</label>
+                                    <input type="date" id="selisih_awal" required class="glass-input-field date-input">
+                                </div>
+                                <div class="form-group">
+                                    <label>Tanggal Akhir</label>
+                                    <input type="date" id="selisih_akhir" required class="glass-input-field date-input">
+                                </div>
+                            </div>
+                            
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="selisih_include_end"> 
+                                    Sertakan tanggal akhir dalam perhitungan (+1 hari)
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="selisih_exclude_holidays" checked> 
+                                    Kecualikan Hari Libur Nasional (Kalender Indonesia)
+                                </label>
+                                
+                                <div style="margin-top: 0.5rem;">
+                                    <label style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase;">Kecualikan Hari (Lewati):</label>
+                                    <div class="days-grid">
+                                        <label class="checkbox-label"><input type="checkbox" value="1" class="selisih_days"> Senin</label>
+                                        <label class="checkbox-label"><input type="checkbox" value="2" class="selisih_days"> Selasa</label>
+                                        <label class="checkbox-label"><input type="checkbox" value="3" class="selisih_days"> Rabu</label>
+                                        <label class="checkbox-label"><input type="checkbox" value="4" class="selisih_days"> Kamis</label>
+                                        <label class="checkbox-label"><input type="checkbox" value="5" class="selisih_days"> Jumat</label>
+                                        <label class="checkbox-label"><input type="checkbox" value="6" class="selisih_days" checked> Sabtu</label>
+                                        <label class="checkbox-label"><input type="checkbox" value="0" class="selisih_days" checked> Minggu</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-actions" style="margin-top: 2rem; display: flex; justify-content: flex-end;">
+                                <button type="submit" class="btn-primary glass-btn large-btn" style="max-width: 250px;">
+                                    <span class="material-symbols-outlined">calculate</span> Hitung Selisih
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- TAB 2: Menambah Hari -->
+                    <div id="tab-tambah" class="tab-content">
+                        <form id="form-tambah" class="glass-form premium-form">
+                            <div class="form-row split-row">
+                                <div class="form-group">
+                                    <label>Tanggal Awal</label>
+                                    <input type="date" id="tambah_awal" required class="glass-input-field date-input">
+                                </div>
+                                <div class="form-group">
+                                    <label>Jumlah Hari untuk Ditambah</label>
+                                    <input type="number" id="tambah_hari" min="1" required class="glass-input-field" placeholder="Contoh: 14">
+                                </div>
+                            </div>
+                            
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="tambah_exclude_holidays" checked> 
+                                    Kecualikan Hari Libur Nasional (Kalender Indonesia)
+                                </label>
+                                
+                                <div style="margin-top: 0.5rem;">
+                                    <label style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase;">Kecualikan Hari (Lewati):</label>
+                                    <div class="days-grid">
+                                        <label class="checkbox-label"><input type="checkbox" value="1" class="tambah_days"> Senin</label>
+                                        <label class="checkbox-label"><input type="checkbox" value="2" class="tambah_days"> Selasa</label>
+                                        <label class="checkbox-label"><input type="checkbox" value="3" class="tambah_days"> Rabu</label>
+                                        <label class="checkbox-label"><input type="checkbox" value="4" class="tambah_days"> Kamis</label>
+                                        <label class="checkbox-label"><input type="checkbox" value="5" class="tambah_days"> Jumat</label>
+                                        <label class="checkbox-label"><input type="checkbox" value="6" class="tambah_days" checked> Sabtu</label>
+                                        <label class="checkbox-label"><input type="checkbox" value="0" class="tambah_days" checked> Minggu</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-actions" style="margin-top: 2rem; display: flex; justify-content: flex-end;">
+                                <button type="submit" class="btn-primary glass-btn large-btn" style="max-width: 250px;">
+                                    <span class="material-symbols-outlined">fast_forward</span> Proses Penambahan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- TAB 3: Mengurangi Hari -->
+                    <div id="tab-kurang" class="tab-content">
+                        <form id="form-kurang" class="glass-form premium-form">
+                            <div class="form-row split-row">
+                                <div class="form-group">
+                                    <label>Tanggal Referensi (Akhir)</label>
+                                    <input type="date" id="kurang_awal" required class="glass-input-field date-input">
+                                </div>
+                                <div class="form-group">
+                                    <label>Jumlah Hari untuk Dikurangi</label>
+                                    <input type="number" id="kurang_hari" min="1" required class="glass-input-field" placeholder="Contoh: 14">
+                                </div>
+                            </div>
+                            
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="kurang_exclude_holidays" checked> 
+                                    Kecualikan Hari Libur Nasional (Kalender Indonesia)
+                                </label>
+                                
+                                <div style="margin-top: 0.5rem;">
+                                    <label style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase;">Kecualikan Hari (Lewati):</label>
+                                    <div class="days-grid">
+                                        <label class="checkbox-label"><input type="checkbox" value="1" class="kurang_days"> Senin</label>
+                                        <label class="checkbox-label"><input type="checkbox" value="2" class="kurang_days"> Selasa</label>
+                                        <label class="checkbox-label"><input type="checkbox" value="3" class="kurang_days"> Rabu</label>
+                                        <label class="checkbox-label"><input type="checkbox" value="4" class="kurang_days"> Kamis</label>
+                                        <label class="checkbox-label"><input type="checkbox" value="5" class="kurang_days"> Jumat</label>
+                                        <label class="checkbox-label"><input type="checkbox" value="6" class="kurang_days" checked> Sabtu</label>
+                                        <label class="checkbox-label"><input type="checkbox" value="0" class="kurang_days" checked> Minggu</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-actions" style="margin-top: 2rem; display: flex; justify-content: flex-end;">
+                                <button type="submit" class="btn-primary glass-btn large-btn" style="max-width: 250px;">
+                                    <span class="material-symbols-outlined">fast_rewind</span> Proses Pengurangan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                </div>
+
+                <!-- Result Area -->
+                <div class="card glass-card result-card full-width" id="resultContainer" style="display: none; margin-top: 2rem; padding: 2.5rem; background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.3); box-shadow: 0 0 30px rgba(0,229,255,0.1);">
+                    <div class="result-header" style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem;">
+                        <div class="result-icon-wrapper success-glow" style="width: 60px; height: 60px; background: rgba(0,230,118,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--success); box-shadow: 0 0 20px rgba(0,230,118,0.4);">
+                            <span class="material-symbols-outlined" style="font-size: 2.5rem;">check_circle</span>
+                        </div>
+                        <div>
+                            <h3 class="result-title" style="font-size: 1.5rem; font-weight: 700;">Hasil Perhitungan</h3>
+                            <p class="result-subtitle" id="resultSubtitle" style="color: var(--text-secondary); margin-top: 0.3rem;"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="result-data-grid" style="display: grid; grid-template-columns: 1fr; gap: 2rem;">
+                        <div class="data-item highlight" style="background: linear-gradient(135deg, rgba(0,230,118,0.1), rgba(0,230,118,0.05)); padding: 2rem; border-radius: 16px; border: 1px solid rgba(0,230,118,0.3); text-align: center;">
+                            <span class="data-label" id="resultLabel" style="display: block; font-size: 1.1rem; color: var(--success); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 1rem;">-</span>
+                            <span class="data-value text-success" id="resultValue" style="font-size: 2.8rem; font-weight: 800; display: block; text-shadow: 0 0 15px rgba(0,230,118,0.5);"></span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <script>
+                // Format tanggal YYYY-MM-DD (Indonesian National Holidays)
+                // This is a representative list for 2024 and some generic ones
+                const indonesianHolidays = [
+                    "2024-01-01", // Tahun Baru Masehi
+                    "2024-02-08", // Isra Mikraj
+                    "2024-02-10", // Tahun Baru Imlek
+                    "2024-03-11", // Hari Suci Nyepi
+                    "2024-03-29", // Wafat Isa Al Masih
+                    "2024-03-31", // Hari Paskah
+                    "2024-04-10", // Hari Raya Idul Fitri
+                    "2024-04-11", // Hari Raya Idul Fitri
+                    "2024-05-01", // Hari Buruh Internasional
+                    "2024-05-09", // Kenaikan Isa Al Masih
+                    "2024-05-23", // Hari Raya Waisak
+                    "2024-06-01", // Hari Lahir Pancasila
+                    "2024-06-17", // Hari Raya Idul Adha
+                    "2024-07-07", // Tahun Baru Islam
+                    "2024-08-17", // Hari Kemerdekaan RI
+                    "2024-09-16", // Maulid Nabi Muhammad SAW
+                    "2024-12-25", // Hari Raya Natal
+                    // Tambahkan 2025 jika diperlukan di masa depan
+                    "2025-01-01",
+                    "2025-01-27",
+                    "2025-03-29",
+                    "2025-03-31",
+                    "2025-04-18",
+                    "2025-05-01",
+                    "2025-05-12",
+                    "2025-05-29",
+                    "2025-06-01",
+                    "2025-06-06",
+                    "2025-06-27",
+                    "2025-08-17",
+                    "2025-09-05",
+                    "2025-12-25"
+                ];
+
+                function openTab(tabId, btnElement) {
+                    // Hide all tab contents
+                    document.querySelectorAll('.tab-content').forEach(tab => {
+                        tab.classList.remove('active');
+                    });
+                    // Remove active class from all buttons
+                    document.querySelectorAll('.tab-btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    
+                    // Show selected tab & set button active
+                    document.getElementById(tabId).classList.add('active');
+                    btnElement.classList.add('active');
+
+                    // Hide results when switching tabs
+                    document.getElementById('resultContainer').style.display = 'none';
+                }
+
+                function isHoliday(dateStr) {
+                    return indonesianHolidays.includes(dateStr);
+                }
+
+                function isExcludedDay(dateObj, excludedDaysArray) {
+                    // getDay() returns 0 for Sunday, 1 for Monday, etc.
+                    return excludedDaysArray.includes(dateObj.getDay().toString());
+                }
+
+                function showResult(title, label, value) {
+                    document.getElementById('resultSubtitle').innerText = title;
+                    document.getElementById('resultLabel').innerText = label;
+                    document.getElementById('resultValue').innerText = value;
+                    document.getElementById('resultContainer').style.display = 'block';
+                    document.getElementById('resultContainer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+
+                function formatDateIndo(dateObj) {
+                    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                    return dateObj.toLocaleDateString('id-ID', options);
+                }
+
+                function formatYMD(dateObj) {
+                    const yyyy = dateObj.getFullYear();
+                    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+                    const dd = String(dateObj.getDate()).padStart(2, '0');
+                    return `${yyyy}-${mm}-${dd}`;
+                }
+
+                // TAB 1: Menghitung Selisih
+                document.getElementById('form-selisih').addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const awalStr = document.getElementById('selisih_awal').value;
+                    const akhirStr = document.getElementById('selisih_akhir').value;
+                    const includeEnd = document.getElementById('selisih_include_end').checked;
+                    const excludeHoliday = document.getElementById('selisih_exclude_holidays').checked;
+                    
+                    const excludedDays = Array.from(document.querySelectorAll('.selisih_days:checked')).map(cb => cb.value);
+
+                    let dateAwal = new Date(awalStr);
+                    let dateAkhir = new Date(akhirStr);
+
+                    if (dateAwal > dateAkhir) {
+                        // Swap if start is greater than end
+                        let temp = dateAwal;
+                        dateAwal = dateAkhir;
+                        dateAkhir = temp;
+                    }
+
+                    let validDaysCount = 0;
+                    let currentDate = new Date(dateAwal);
+
+                    // If not including end date, loop until currentDate < dateAkhir
+                    // If including end date, loop until currentDate <= dateAkhir
+                    // Wait, standard diff doesn't count the start date itself if we just do end-start.
+                    // E.g. Aug 1 to Aug 5 is 4 days. (1->2, 2->3, 3->4, 4->5).
+                    // This means we check Aug 1, Aug 2, Aug 3, Aug 4. (4 days)
+                    
+                    while (currentDate < dateAkhir) {
+                        let ymd = formatYMD(currentDate);
+                        let skip = false;
+
+                        if (excludeHoliday && isHoliday(ymd)) { skip = true; }
+                        if (isExcludedDay(currentDate, excludedDays)) { skip = true; }
+
+                        if (!skip) {
+                            validDaysCount++;
+                        }
+                        currentDate.setDate(currentDate.getDate() + 1);
+                    }
+
+                    // Process end date if includeEnd is checked
+                    if (includeEnd) {
+                        let ymd = formatYMD(dateAkhir);
+                        let skip = false;
+                        if (excludeHoliday && isHoliday(ymd)) { skip = true; }
+                        if (isExcludedDay(dateAkhir, excludedDays)) { skip = true; }
+                        
+                        if (!skip) {
+                            validDaysCount++;
+                        }
+                    }
+
+                    let infoText = `Dari ${formatDateIndo(new Date(awalStr))} hingga ${formatDateIndo(new Date(akhirStr))}`;
+                    showResult(infoText, "Total Selisih Hari", `${validDaysCount} Hari`);
+                });
+
+                // TAB 2: Menambah Hari
+                document.getElementById('form-tambah').addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const awalStr = document.getElementById('tambah_awal').value;
+                    const hariTambah = parseInt(document.getElementById('tambah_hari').value);
+                    const excludeHoliday = document.getElementById('tambah_exclude_holidays').checked;
+                    const excludedDays = Array.from(document.querySelectorAll('.tambah_days:checked')).map(cb => cb.value);
+
+                    let currentDate = new Date(awalStr);
+                    let daysAdded = 0;
+
+                    // Iterate day by day, skipping excluded days
+                    while (daysAdded < hariTambah) {
+                        currentDate.setDate(currentDate.getDate() + 1);
+                        
+                        let ymd = formatYMD(currentDate);
+                        let skip = false;
+
+                        if (excludeHoliday && isHoliday(ymd)) { skip = true; }
+                        if (isExcludedDay(currentDate, excludedDays)) { skip = true; }
+
+                        if (!skip) {
+                            daysAdded++;
+                        }
+                    }
+
+                    let infoText = `${hariTambah} hari kerja setelah ${formatDateIndo(new Date(awalStr))}`;
+                    showResult(infoText, "Tanggal Hasil", formatDateIndo(currentDate));
+                });
+
+                // TAB 3: Mengurangi Hari
+                document.getElementById('form-kurang').addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const awalStr = document.getElementById('kurang_awal').value;
+                    const hariKurang = parseInt(document.getElementById('kurang_hari').value);
+                    const excludeHoliday = document.getElementById('kurang_exclude_holidays').checked;
+                    const excludedDays = Array.from(document.querySelectorAll('.kurang_days:checked')).map(cb => cb.value);
+
+                    let currentDate = new Date(awalStr);
+                    let daysSubtracted = 0;
+
+                    // Iterate backwards day by day, skipping excluded days
+                    while (daysSubtracted < hariKurang) {
+                        currentDate.setDate(currentDate.getDate() - 1);
+                        
+                        let ymd = formatYMD(currentDate);
+                        let skip = false;
+
+                        if (excludeHoliday && isHoliday(ymd)) { skip = true; }
+                        if (isExcludedDay(currentDate, excludedDays)) { skip = true; }
+
+                        if (!skip) {
+                            daysSubtracted++;
+                        }
+                    }
+
+                    let infoText = `${hariKurang} hari kerja sebelum ${formatDateIndo(new Date(awalStr))}`;
+                    showResult(infoText, "Tanggal Hasil", formatDateIndo(currentDate));
+                });
+            </script>
+        </main>
+    </div>
+</body>
+</html>

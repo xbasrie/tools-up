@@ -247,9 +247,26 @@
                                     <label>Tanggal Awal</label>
                                     <input type="date" id="tambah_awal" required class="glass-input-field date-input">
                                 </div>
-                                <div class="form-group">
-                                    <label>Jumlah Hari untuk Ditambah</label>
-                                    <input type="number" id="tambah_hari" min="1" required class="glass-input-field" placeholder="Contoh: 14">
+                                <div class="form-group" style="flex: 2;">
+                                    <label>Periode Penambahan</label>
+                                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;">
+                                        <div>
+                                            <input type="number" id="tambah_tahun" min="0" value="0" class="glass-input-field" style="width:100%; padding: 0.6rem; text-align: center;">
+                                            <span style="font-size:0.75rem; color:var(--text-muted); display:block; text-align:center; margin-top:4px;">Tahun</span>
+                                        </div>
+                                        <div>
+                                            <input type="number" id="tambah_bulan" min="0" value="0" class="glass-input-field" style="width:100%; padding: 0.6rem; text-align: center;">
+                                            <span style="font-size:0.75rem; color:var(--text-muted); display:block; text-align:center; margin-top:4px;">Bulan</span>
+                                        </div>
+                                        <div>
+                                            <input type="number" id="tambah_minggu" min="0" value="0" class="glass-input-field" style="width:100%; padding: 0.6rem; text-align: center;">
+                                            <span style="font-size:0.75rem; color:var(--text-muted); display:block; text-align:center; margin-top:4px;">Minggu</span>
+                                        </div>
+                                        <div>
+                                            <input type="number" id="tambah_hari" min="0" value="0" class="glass-input-field" style="width:100%; padding: 0.6rem; text-align: center;">
+                                            <span style="font-size:0.75rem; color:var(--text-muted); display:block; text-align:center; margin-top:4px;">Hari</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -289,9 +306,26 @@
                                     <label>Tanggal Referensi (Akhir)</label>
                                     <input type="date" id="kurang_awal" required class="glass-input-field date-input">
                                 </div>
-                                <div class="form-group">
-                                    <label>Jumlah Hari untuk Dikurangi</label>
-                                    <input type="number" id="kurang_hari" min="1" required class="glass-input-field" placeholder="Contoh: 14">
+                                <div class="form-group" style="flex: 2;">
+                                    <label>Periode Pengurangan</label>
+                                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;">
+                                        <div>
+                                            <input type="number" id="kurang_tahun" min="0" value="0" class="glass-input-field" style="width:100%; padding: 0.6rem; text-align: center;">
+                                            <span style="font-size:0.75rem; color:var(--text-muted); display:block; text-align:center; margin-top:4px;">Tahun</span>
+                                        </div>
+                                        <div>
+                                            <input type="number" id="kurang_bulan" min="0" value="0" class="glass-input-field" style="width:100%; padding: 0.6rem; text-align: center;">
+                                            <span style="font-size:0.75rem; color:var(--text-muted); display:block; text-align:center; margin-top:4px;">Bulan</span>
+                                        </div>
+                                        <div>
+                                            <input type="number" id="kurang_minggu" min="0" value="0" class="glass-input-field" style="width:100%; padding: 0.6rem; text-align: center;">
+                                            <span style="font-size:0.75rem; color:var(--text-muted); display:block; text-align:center; margin-top:4px;">Minggu</span>
+                                        </div>
+                                        <div>
+                                            <input type="number" id="kurang_hari" min="0" value="0" class="glass-input-field" style="width:100%; padding: 0.6rem; text-align: center;">
+                                            <span style="font-size:0.75rem; color:var(--text-muted); display:block; text-align:center; margin-top:4px;">Hari</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -348,40 +382,40 @@
 
             <script>
                 // Format tanggal YYYY-MM-DD (Indonesian National Holidays)
-                // This is a representative list for 2024 and some generic ones
+                // This is a representative list for 2024, 2025, and 2026
                 const indonesianHolidays = [
-                    "2024-01-01", // Tahun Baru Masehi
-                    "2024-02-08", // Isra Mikraj
-                    "2024-02-10", // Tahun Baru Imlek
-                    "2024-03-11", // Hari Suci Nyepi
-                    "2024-03-29", // Wafat Isa Al Masih
-                    "2024-03-31", // Hari Paskah
-                    "2024-04-10", // Hari Raya Idul Fitri
-                    "2024-04-11", // Hari Raya Idul Fitri
-                    "2024-05-01", // Hari Buruh Internasional
-                    "2024-05-09", // Kenaikan Isa Al Masih
-                    "2024-05-23", // Hari Raya Waisak
-                    "2024-06-01", // Hari Lahir Pancasila
-                    "2024-06-17", // Hari Raya Idul Adha
-                    "2024-07-07", // Tahun Baru Islam
-                    "2024-08-17", // Hari Kemerdekaan RI
-                    "2024-09-16", // Maulid Nabi Muhammad SAW
-                    "2024-12-25", // Hari Raya Natal
-                    // Tambahkan 2025 jika diperlukan di masa depan
-                    "2025-01-01",
-                    "2025-01-27",
-                    "2025-03-29",
-                    "2025-03-31",
-                    "2025-04-18",
-                    "2025-05-01",
-                    "2025-05-12",
-                    "2025-05-29",
-                    "2025-06-01",
-                    "2025-06-06",
-                    "2025-06-27",
-                    "2025-08-17",
-                    "2025-09-05",
-                    "2025-12-25"
+                    "2024-01-01", "2024-02-08", "2024-02-10", "2024-03-11", "2024-03-29", "2024-03-31", 
+                    "2024-04-10", "2024-04-11", "2024-05-01", "2024-05-09", "2024-05-23", "2024-06-01", 
+                    "2024-06-17", "2024-07-07", "2024-08-17", "2024-09-16", "2024-12-25",
+                    "2025-01-01", "2025-01-27", "2025-03-29", "2025-03-31", "2025-04-18", "2025-05-01", 
+                    "2025-05-12", "2025-05-29", "2025-06-01", "2025-06-06", "2025-06-27", "2025-08-17", 
+                    "2025-09-05", "2025-12-25",
+                    // 2026 Holidays
+                    "2026-01-01", // Tahun Baru 2026 Masehi
+                    "2026-01-16", // Isra Mi'raj
+                    "2026-02-16", // Cuti Bersama Imlek
+                    "2026-02-17", // Tahun Baru Imlek
+                    "2026-03-18", // Cuti Bersama Nyepi
+                    "2026-03-19", // Hari Suci Nyepi
+                    "2026-03-20", // Cuti Bersama Idul Fitri
+                    "2026-03-21", // Hari Raya Idul Fitri
+                    "2026-03-22", // Hari Raya Idul Fitri
+                    "2026-03-23", // Cuti Bersama Idul Fitri
+                    "2026-03-24", // Cuti Bersama Idul Fitri
+                    "2026-04-03", // Wafat Yesus Kristus
+                    "2026-04-05", // Paskah
+                    "2026-05-01", // Hari Buruh
+                    "2026-05-14", // Kenaikan Yesus Kristus
+                    "2026-05-15", // Cuti Bersama Kenaikan
+                    "2026-05-27", // Idul Adha
+                    "2026-05-28", // Cuti Bersama Idul Adha
+                    "2026-05-31", // Waisak
+                    "2026-06-01", // Hari Lahir Pancasila
+                    "2026-06-16", // Tahun Baru Islam
+                    "2026-08-17", // Kemerdekaan RI
+                    "2026-08-25", // Maulid Nabi
+                    "2026-12-24", // Cuti Bersama Natal
+                    "2026-12-25"  // Natal
                 ];
 
                 function openTab(tabId, btnElement) {
@@ -495,17 +529,23 @@
                     e.preventDefault();
                     
                     const awalStr = document.getElementById('tambah_awal').value;
-                    const hariTambah = parseInt(document.getElementById('tambah_hari').value);
+                    const valTahun = parseInt(document.getElementById('tambah_tahun').value) || 0;
+                    const valBulan = parseInt(document.getElementById('tambah_bulan').value) || 0;
+                    const valMinggu = parseInt(document.getElementById('tambah_minggu').value) || 0;
+                    const valHari = parseInt(document.getElementById('tambah_hari').value) || 0;
                     const excludeHoliday = document.getElementById('tambah_exclude_holidays').checked;
                     const excludedDays = Array.from(document.querySelectorAll('.tambah_days:checked')).map(cb => cb.value);
 
                     let currentDate = new Date(awalStr);
-                    let daysAdded = 0;
+                    
+                    if (valTahun > 0) currentDate.setFullYear(currentDate.getFullYear() + valTahun);
+                    if (valBulan > 0) currentDate.setMonth(currentDate.getMonth() + valBulan);
 
-                    // Iterate day by day, skipping excluded days
-                    while (daysAdded < hariTambah) {
+                    let daysAdded = 0;
+                    let totalDaysToAdd = (valMinggu * 7) + valHari;
+
+                    while (daysAdded < totalDaysToAdd) {
                         currentDate.setDate(currentDate.getDate() + 1);
-                        
                         let ymd = formatYMD(currentDate);
                         let skip = false;
 
@@ -517,7 +557,23 @@
                         }
                     }
 
-                    let infoText = `${hariTambah} hari kerja setelah ${formatDateIndo(new Date(awalStr))}`;
+                    if (totalDaysToAdd === 0 && valTahun === 0 && valBulan === 0) {
+                        // User did not add any time
+                    } else if (totalDaysToAdd === 0) {
+                        let ymd = formatYMD(currentDate);
+                        while ((excludeHoliday && isHoliday(ymd)) || isExcludedDay(currentDate, excludedDays)) {
+                            currentDate.setDate(currentDate.getDate() + 1);
+                            ymd = formatYMD(currentDate);
+                        }
+                    }
+
+                    let infoParts = [];
+                    if (valTahun > 0) infoParts.push(`${valTahun} Tahun`);
+                    if (valBulan > 0) infoParts.push(`${valBulan} Bulan`);
+                    if (valMinggu > 0) infoParts.push(`${valMinggu} Minggu`);
+                    if (valHari > 0) infoParts.push(`${valHari} Hari`);
+                    let infoText = infoParts.length > 0 ? `${infoParts.join(', ')} setelah ${formatDateIndo(new Date(awalStr))}` : `Sama dengan ${formatDateIndo(new Date(awalStr))}`;
+                    
                     showResult(infoText, "Tanggal Hasil", formatDateIndo(currentDate));
                 });
 
@@ -526,17 +582,23 @@
                     e.preventDefault();
                     
                     const awalStr = document.getElementById('kurang_awal').value;
-                    const hariKurang = parseInt(document.getElementById('kurang_hari').value);
+                    const valTahun = parseInt(document.getElementById('kurang_tahun').value) || 0;
+                    const valBulan = parseInt(document.getElementById('kurang_bulan').value) || 0;
+                    const valMinggu = parseInt(document.getElementById('kurang_minggu').value) || 0;
+                    const valHari = parseInt(document.getElementById('kurang_hari').value) || 0;
                     const excludeHoliday = document.getElementById('kurang_exclude_holidays').checked;
                     const excludedDays = Array.from(document.querySelectorAll('.kurang_days:checked')).map(cb => cb.value);
 
                     let currentDate = new Date(awalStr);
-                    let daysSubtracted = 0;
+                    
+                    if (valTahun > 0) currentDate.setFullYear(currentDate.getFullYear() - valTahun);
+                    if (valBulan > 0) currentDate.setMonth(currentDate.getMonth() - valBulan);
 
-                    // Iterate backwards day by day, skipping excluded days
-                    while (daysSubtracted < hariKurang) {
+                    let daysSubtracted = 0;
+                    let totalDaysToSubtract = (valMinggu * 7) + valHari;
+
+                    while (daysSubtracted < totalDaysToSubtract) {
                         currentDate.setDate(currentDate.getDate() - 1);
-                        
                         let ymd = formatYMD(currentDate);
                         let skip = false;
 
@@ -548,7 +610,23 @@
                         }
                     }
 
-                    let infoText = `${hariKurang} hari kerja sebelum ${formatDateIndo(new Date(awalStr))}`;
+                    if (totalDaysToSubtract === 0 && valTahun === 0 && valBulan === 0) {
+                        // User did not subtract any time
+                    } else if (totalDaysToSubtract === 0) {
+                        let ymd = formatYMD(currentDate);
+                        while ((excludeHoliday && isHoliday(ymd)) || isExcludedDay(currentDate, excludedDays)) {
+                            currentDate.setDate(currentDate.getDate() - 1);
+                            ymd = formatYMD(currentDate);
+                        }
+                    }
+
+                    let infoParts = [];
+                    if (valTahun > 0) infoParts.push(`${valTahun} Tahun`);
+                    if (valBulan > 0) infoParts.push(`${valBulan} Bulan`);
+                    if (valMinggu > 0) infoParts.push(`${valMinggu} Minggu`);
+                    if (valHari > 0) infoParts.push(`${valHari} Hari`);
+                    let infoText = infoParts.length > 0 ? `${infoParts.join(', ')} sebelum ${formatDateIndo(new Date(awalStr))}` : `Sama dengan ${formatDateIndo(new Date(awalStr))}`;
+                    
                     showResult(infoText, "Tanggal Hasil", formatDateIndo(currentDate));
                 });
             </script>

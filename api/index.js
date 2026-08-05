@@ -10,7 +10,7 @@ const port = 3000;
 
 // Middleware
 app.use(cors());
-app.use(express.static(path.join(__dirname))); // Serve static files from current directory
+app.use(express.static(path.join(__dirname, '..'))); // Serve static files from parent directory
 app.use(express.json());
 
 // Set up multer for file uploads in memory

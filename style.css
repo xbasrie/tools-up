@@ -726,7 +726,9 @@ tbody tr:hover {
         border-top: 1px solid var(--glass-border);
         border-bottom: none;
         border-radius: 20px 20px 0 0;
-        background: rgba(10, 25, 47, 0.85);
+        background: rgba(10, 25, 47, 0.95);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
         z-index: 1000;
         box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
     }
@@ -737,18 +739,71 @@ tbody tr:hover {
         flex-direction: row;
         width: 100%;
         justify-content: space-around;
+        align-items: center;
         margin: 0;
     }
+    .menu-group {
+        position: relative;
+    }
     .menu-item {
-        padding: 0.6rem 1rem;
+        padding: 0.8rem;
         border-radius: 12px;
+        justify-content: center;
     }
     .menu-item .text {
         display: none;
     }
+    .parent-menu > div {
+        gap: 0 !important;
+    }
+    .parent-menu .expand-icon {
+        display: none;
+    }
+    .sub-menu {
+        position: absolute;
+        bottom: calc(100% + 15px);
+        left: 50%;
+        transform: translateX(-50%);
+        width: max-content;
+        min-width: 160px;
+        background: rgba(10, 25, 47, 0.95);
+        border: 1px solid rgba(0, 229, 255, 0.2);
+        padding: 0.5rem;
+        margin: 0;
+        flex-direction: column;
+        gap: 0.3rem;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 15px rgba(0,229,255,0.15);
+        border-radius: 16px;
+    }
+    /* Tambahkan panah/segitiga kecil mengarah ke icon (tooltip effect) */
+    .sub-menu::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border-width: 8px;
+        border-style: solid;
+        border-color: rgba(10, 25, 47, 0.95) transparent transparent transparent;
+    }
+    .sub-menu .menu-item {
+        flex-direction: row;
+        justify-content: flex-start;
+        padding: 0.8rem 1.2rem;
+        border-radius: 10px;
+    }
+    .sub-menu .menu-item .text {
+        display: block;
+        font-size: 0.95rem;
+    }
+    .sub-menu .menu-item .icon {
+        margin-right: 0.8rem;
+    }
     .main-panel {
         padding: 1rem;
-        padding-bottom: 6rem;
+        padding-bottom: 7rem;
         border-radius: 0;
         overflow-y: visible;
     }

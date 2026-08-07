@@ -191,13 +191,22 @@
                             </div>
                         </div>
                         
-                        <div class="mode-selection">
+                        <div class="mode-selection" style="flex-wrap: wrap;">
                             <label class="radio-card">
-                                <input type="radio" name="splitMode" value="range" checked>
+                                <input type="radio" name="splitMode" value="range_merge" checked>
                                 <div class="radio-content">
                                     <span class="material-symbols-outlined icon">edit_document</span>
-                                    <h4>Ekstrak Rentang</h4>
-                                    <p>Pilih halaman tertentu untuk disatukan menjadi 1 file PDF baru.</p>
+                                    <h4>Ekstrak & Gabung</h4>
+                                    <p>Ambil halaman tertentu (cth: 1, 3-5) menjadi 1 PDF.</p>
+                                </div>
+                            </label>
+
+                            <label class="radio-card">
+                                <input type="radio" name="splitMode" value="range_split">
+                                <div class="radio-content">
+                                    <span class="material-symbols-outlined icon">splitscreen</span>
+                                    <h4>Pisah per Rentang</h4>
+                                    <p>Pisah berdasarkan rentang (cth: 1-2, 3-14) menjadi bbrp PDF (.zip).</p>
                                 </div>
                             </label>
                             
@@ -206,7 +215,7 @@
                                 <div class="radio-content">
                                     <span class="material-symbols-outlined icon">grid_view</span>
                                     <h4>Pecah Semua</h4>
-                                    <p>Ekstrak setiap halaman menjadi file PDF terpisah (Diunduh dalam .zip).</p>
+                                    <p>Ekstrak tiap halaman menjadi PDF terpisah (.zip).</p>
                                 </div>
                             </label>
                         </div>
@@ -239,9 +248,14 @@
                         </div>
                         <h3 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">Berhasil Diproses</h3>
                         <p style="color: var(--text-muted); margin-bottom: 2rem;">File Anda telah berhasil dipisahkan dan siap diunduh.</p>
-                        <a id="btnDownloadResult" href="#" class="btn btn-primary" style="display: inline-flex; padding: 1rem 2rem;">
-                            <span class="material-symbols-outlined">download</span> Unduh Hasil
-                        </a>
+                        <div style="display: flex; gap: 1rem; justify-content: center;">
+                            <a id="btnDownloadResult" href="#" class="btn btn-primary" style="display: inline-flex; padding: 1rem 2rem;">
+                                <span class="material-symbols-outlined">download</span> Unduh Hasil
+                            </a>
+                            <button id="btnReset" class="btn btn-secondary" style="padding: 1rem 2rem; display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text); border-radius: 8px; cursor: pointer;">
+                                <span class="material-symbols-outlined">refresh</span> Proses File Lain
+                            </button>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -270,6 +284,7 @@
                 
                 const resultArea = document.getElementById('resultArea');
                 const btnDownloadResult = document.getElementById('btnDownloadResult');
+                const btnReset = document.getElementById('btnReset');
                 
                 let currentFile = null;
                 let totalPages = 0;
@@ -387,7 +402,7 @@
                 const radios = document.querySelectorAll('input[name="splitMode"]');
                 radios.forEach(radio => {
                     radio.addEventListener('change', (e) => {
-                        if (e.target.value === 'range') {
+                        if (e.target.value === 'range_merge' || e.target.value === 'range_split') {
                             rangeInputContainer.style.display = 'block';
                         } else {
                             rangeInputContainer.style.display = 'none';
@@ -396,32 +411,48 @@
                 });
 
                 // Cancel Button
-                btnCancel.addEventListener('click', () => {
+                btnCancel.addEventListener('click', resetUI);
+                
+                // Reset Button
+                btnReset.addEventListener('click', resetUI);
+
+                function resetUI() {
                     currentFile = null;
                     totalPages = 0;
                     dropZone.style.display = 'block';
                     optionsArea.style.display = 'none';
                     resultArea.style.display = 'none';
                     rangeInput.value = '';
-                });
+                    uploadTitle.innerHTML = 'Klik atau Tarik File PDF ke sini';
+                    uploadSubtitle.style.display = 'block';
+                    dropZone.style.pointerEvents = 'auto';
+                    fileInput.value = '';
+                    pagesPreviewContainer.innerHTML = '';
+                    mainProgress.style.display = 'none';
+                    mainProgressFill.style.width = '0%';
+                }
 
-                // Parse Range String e.g. "1-3, 5, 8-10"
-                function parseRange(text, maxPages) {
-                    const indices = [];
+                // Parse Multiple Ranges for splitting. e.g. "1-3, 5, 8-10"
+                function parseMultipleRanges(text, maxPages) {
+                    const ranges = [];
                     const parts = text.split(',');
                     
                     for (let part of parts) {
                         part = part.trim();
                         if (!part) continue;
                         
+                        const indices = [];
                         if (part.includes('-')) {
                             const [startStr, endStr] = part.split('-');
                             const start = parseInt(startStr);
                             const end = parseInt(endStr);
                             
-                            if (!isNaN(start) && !isNaN(end) && start > 0 && end >= start && end <= maxPages) {
-                                for (let i = start; i <= end; i++) {
-                                    indices.push(i - 1); // 0-indexed for pdf-lib
+                            if (!isNaN(start) && !isNaN(end) && start > 0) {
+                                const actualEnd = Math.min(end, maxPages);
+                                if (actualEnd >= start) {
+                                    for (let i = start; i <= actualEnd; i++) {
+                                        indices.push(i - 1);
+                                    }
                                 }
                             }
                         } else {
@@ -430,8 +461,15 @@
                                 indices.push(num - 1);
                             }
                         }
+                        
+                        if (indices.length > 0) {
+                            ranges.push({
+                                name: part.replace(/\s+/g, ''),
+                                indices: [...new Set(indices)].sort((a,b) => a-b)
+                            });
+                        }
                     }
-                    return [...new Set(indices)].sort((a,b) => a-b); // unique and sorted
+                    return ranges;
                 }
 
                 // Split Processing
@@ -441,16 +479,25 @@
                     const mode = document.querySelector('input[name="splitMode"]:checked').value;
                     let pageIndices = [];
                     
-                    if (mode === 'range') {
+                    if (mode === 'range_merge' || mode === 'range_split') {
                         const rangeText = rangeInput.value;
-                        pageIndices = parseRange(rangeText, totalPages);
+                        const ranges = parseMultipleRanges(rangeText, totalPages);
                         
-                        if (pageIndices.length === 0) {
+                        if (ranges.length === 0) {
                             alert(`Format rentang salah. Masukkan rentang yang valid antara 1 sampai ${totalPages}.`);
                             return;
                         }
+                        
+                        if (mode === 'range_merge') {
+                            const allIndices = [];
+                            ranges.forEach(r => allIndices.push(...r.indices));
+                            pageIndices = [...new Set(allIndices)].sort((a,b) => a-b);
+                        } else {
+                            pageIndices = ranges; // for range_split, store the array of range objects
+                        }
                     } else {
                         // All pages
+                        pageIndices = [];
                         for (let i = 0; i < totalPages; i++) pageIndices.push(i);
                     }
                     
@@ -463,7 +510,7 @@
                         const arrayBuffer = await currentFile.arrayBuffer();
                         const originalPdf = await PDFDocument.load(arrayBuffer);
                         
-                        if (mode === 'range') {
+                        if (mode === 'range_merge') {
                             mainProgressFill.style.width = '50%';
                             const newPdf = await PDFDocument.create();
                             const copiedPages = await newPdf.copyPages(originalPdf, pageIndices);
@@ -476,6 +523,29 @@
                             mainProgressFill.style.width = '100%';
                             setupDownload(blob, `extracted-${currentFile.name}`);
                             
+                        } else if (mode === 'range_split') {
+                            const zip = new JSZip();
+                            const ranges = pageIndices;
+                            
+                            for (let i = 0; i < ranges.length; i++) {
+                                const rangeObj = ranges[i];
+                                const newPdf = await PDFDocument.create();
+                                const copiedPages = await newPdf.copyPages(originalPdf, rangeObj.indices);
+                                copiedPages.forEach(page => newPdf.addPage(page));
+                                
+                                const pdfBytes = await newPdf.save();
+                                zip.file(`range-${rangeObj.name}.pdf`, pdfBytes);
+                                
+                                mainProgressFill.style.width = Math.floor(10 + ((i / ranges.length) * 80)) + '%';
+                                await new Promise(resolve => setTimeout(resolve, 0));
+                            }
+                            
+                            mainProgressFill.style.width = '95%';
+                            const zipBlob = await zip.generateAsync({ type: "blob" });
+                            
+                            mainProgressFill.style.width = '100%';
+                            setupDownload(zipBlob, `split-ranges-${currentFile.name.replace(/\.pdf$/i, '')}.zip`);
+
                         } else if (mode === 'all') {
                             const zip = new JSZip();
                             
@@ -488,6 +558,9 @@
                                 zip.file(`page-${i + 1}.pdf`, pdfBytes);
                                 
                                 mainProgressFill.style.width = Math.floor(10 + ((i / totalPages) * 80)) + '%';
+                                
+                                // Prevent browser freezing and allow UI to update
+                                await new Promise(resolve => setTimeout(resolve, 0));
                             }
                             
                             mainProgressFill.style.width = '95%';

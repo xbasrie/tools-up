@@ -104,6 +104,59 @@
             color: var(--bg-primary);
             box-shadow: 0 0 15px rgba(0,230,118,0.4);
         }
+        .mode-selection {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .radio-card {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .radio-card:hover {
+            border-color: rgba(0, 229, 255, 0.3);
+            background: rgba(0, 229, 255, 0.02);
+        }
+        .radio-card input[type="radio"] {
+            display: none;
+        }
+        .radio-card input[type="radio"]:checked + .radio-content {
+            color: var(--text);
+        }
+        .radio-card:has(input[type="radio"]:checked) {
+            border-color: var(--accent);
+            background: rgba(0, 229, 255, 0.05);
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.1);
+        }
+        .radio-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .radio-content .icon {
+            font-size: 2rem;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+        .radio-content h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        .radio-content p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+        @media (max-width: 768px) {
+            .mode-selection {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 <body>
@@ -164,7 +217,7 @@
             <header class="top-bar">
                 <div class="page-title">
                     <h1>Kompres PDF</h1>
-                    <p class="subtitle">Perkecil ukuran file PDF Anda agar tidak lebih dari 500KB</p>
+                    <p class="subtitle">Perkecil ukuran file PDF Anda dengan berbagai pilihan kualitas.</p>
                 </div>
             </header>
             
@@ -176,14 +229,45 @@
                             <span class="material-symbols-outlined text-accent" style="font-size: 2rem;">compress</span> 
                             Alat Kompresi PDF (Multi-File)
                         </h3>
-                        <p class="subtitle" style="margin-top: 0.5rem; color: var(--text-muted);">Pilih atau tarik beberapa file PDF ke area di bawah ini. File akan diproses agar berukuran maksimal 500KB.</p>
+                        <p class="subtitle" style="margin-top: 0.5rem; color: var(--text-muted);">Pilih tingkat kompresi yang diinginkan lalu unggah file PDF Anda.</p>
                     </div>
 
+                    <h4 style="margin-bottom: 1rem; font-size: 1.1rem;">1. Pilih Tingkat Kompresi</h4>
+                    <div class="mode-selection">
+                        <label class="radio-card">
+                            <input type="radio" name="compressMode" value="light" checked>
+                            <div class="radio-content">
+                                <span class="material-symbols-outlined icon">check_circle</span>
+                                <h4>Kompresi Ringan</h4>
+                                <p>Menjaga kualitas visual sebaik mungkin. Ukuran berkurang sedikit.</p>
+                            </div>
+                        </label>
+                        
+                        <label class="radio-card">
+                            <input type="radio" name="compressMode" value="medium">
+                            <div class="radio-content">
+                                <span class="material-symbols-outlined icon">compress</span>
+                                <h4>Kompresi Sedang</h4>
+                                <p>Rekomendasi terbaik. Seimbang antara kualitas dan ukuran file.</p>
+                            </div>
+                        </label>
+
+                        <label class="radio-card">
+                            <input type="radio" name="compressMode" value="500kb">
+                            <div class="radio-content">
+                                <span class="material-symbols-outlined icon">folder_zip</span>
+                                <h4>Paksa &lt; 500KB</h4>
+                                <p>Ukuran sangat kecil (cocok untuk sscn/web), kualitas akan menurun.</p>
+                            </div>
+                        </label>
+                    </div>
+
+                    <h4 style="margin-bottom: 1rem; font-size: 1.1rem;">2. Unggah File Anda</h4>
                     <div id="dropZone" class="upload-area glass-panel" style="border: 2px dashed rgba(0, 229, 255, 0.4); padding: 4rem 2rem; text-align: center; cursor: pointer; transition: all 0.3s ease; border-radius: 16px; margin-bottom: 2rem; position: relative;">
                         <input type="file" id="fileInput" multiple accept=".pdf" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; opacity: 0; cursor: pointer;">
                         <span class="material-symbols-outlined" style="font-size: 4rem; color: var(--accent); margin-bottom: 1rem; display: block; filter: drop-shadow(0 0 10px rgba(0,229,255,0.3));">upload_file</span>
                         <h4 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem;">Klik atau Tarik File PDF ke sini</h4>
-                        <p style="color: var(--text-muted); font-size: 0.9rem;">Maksimal ukuran target: 500KB per file. Anda dapat memilih beberapa file sekaligus.</p>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">Anda dapat memilih beberapa file sekaligus.</p>
                     </div>
 
                     <div id="fileListContainer" style="display: none;">
@@ -212,8 +296,14 @@
                         </div>
                     </div>
                     
-                    <div id="resultList" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div id="resultList" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2rem;">
                         <!-- Compressed files result injected here -->
+                    </div>
+                    
+                    <div style="display: flex; justify-content: center;">
+                        <button id="btnReset" class="btn btn-secondary" style="padding: 1rem 2rem; display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text); border-radius: 8px; cursor: pointer;">
+                            <span class="material-symbols-outlined">refresh</span> Proses File Lain
+                        </button>
                     </div>
                 </div>
             </section>
@@ -226,6 +316,7 @@
                 const btnCompress = document.getElementById('btnCompress');
                 const resultContainer = document.getElementById('resultContainer');
                 const resultList = document.getElementById('resultList');
+                const btnReset = document.getElementById('btnReset');
                 
                 let selectedFiles = [];
 
@@ -316,9 +407,20 @@
                         });
                     } else {
                         fileListContainer.style.display = 'none';
-                        // reset file input
                         fileInput.value = '';
                     }
+                }
+
+                if (btnReset) {
+                    btnReset.addEventListener('click', () => {
+                        selectedFiles = [];
+                        fileList.innerHTML = '';
+                        resultList.innerHTML = '';
+                        fileListContainer.style.display = 'none';
+                        resultContainer.style.display = 'none';
+                        fileInput.value = '';
+                        document.querySelector('input[name="compressMode"][value="light"]').checked = true;
+                    });
                 }
 
                 // Process Compression via API
@@ -334,20 +436,36 @@
                     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
                     const { jsPDF } = window.jspdf;
 
-                    async function clientCompressPDF(file, updateProgress) {
-                        const targetSize = 499 * 1024;
+                    async function clientCompressPDF(file, updateProgress, mode) {
                         const arrayBuffer = await file.arrayBuffer();
                         const pdfDoc = await pdfjsLib.getDocument(arrayBuffer).promise;
                         const numPages = pdfDoc.numPages;
 
                         let quality = 0.8;
-                        let scale = 2.0; 
+                        let scale = 2.0;
+                        let maxAttempts = 1;
+                        const targetSize = 499 * 1024;
+
+                        if (mode === 'light') {
+                            quality = 0.9;
+                            scale = 2.0;
+                            maxAttempts = 1;
+                        } else if (mode === 'medium') {
+                            quality = 0.7;
+                            scale = 1.5;
+                            maxAttempts = 1;
+                        } else if (mode === '500kb') {
+                            quality = 0.7;
+                            scale = 1.5;
+                            maxAttempts = 5;
+                        }
+
                         let blob = null;
                         let attempts = 0;
                         
                         updateProgress('20%');
 
-                        while (attempts < 5) {
+                        while (attempts < maxAttempts) {
                             const newPdf = new jsPDF('p', 'pt', 'a4');
                             
                             for (let pageNum = 1; pageNum <= numPages; pageNum++) {
@@ -377,15 +495,24 @@
 
                             blob = newPdf.output('blob');
                             
-                            if (blob.size <= targetSize) {
-                                break; // Target reached
+                            if (mode === '500kb') {
+                                if (blob.size <= targetSize) {
+                                    break; // Target reached
+                                } else {
+                                    quality -= 0.2;
+                                    scale -= 0.3;
+                                    if (quality < 0.2) quality = 0.2;
+                                    if (scale < 0.8) scale = 0.8;
+                                    attempts++;
+                                }
                             } else {
-                                quality -= 0.2;
-                                scale -= 0.4;
-                                if (quality < 0.2) quality = 0.2;
-                                if (scale < 0.8) scale = 0.8;
-                                attempts++;
+                                break;
                             }
+                        }
+                        
+                        // If standard compression somehow made it larger, return original (except if forced 500kb)
+                        if (mode !== '500kb' && blob.size >= file.size) {
+                            return file;
                         }
                         
                         return blob;
@@ -393,6 +520,7 @@
 
                     let completedCount = 0;
                     resultList.innerHTML = '';
+                    const selectedMode = document.querySelector('input[name="compressMode"]:checked').value;
                     
                     // Process files sequentially to avoid freezing browser UI with heavy canvas tasks
                     for (let index = 0; index < selectedFiles.length; index++) {
@@ -403,7 +531,7 @@
                         try {
                             const compressedBlob = await clientCompressPDF(file, (prog) => {
                                 progressFill.style.width = prog;
-                            });
+                            }, selectedMode);
 
                             progressFill.style.width = '100%';
                             

@@ -453,7 +453,9 @@ tbody tr:hover { background-color: rgba(0, 124, 61, 0.02); }
         position: fixed; bottom: 0; left: 0; width: 100%; height: auto; padding: 0;
         flex-direction: row; align-items: center; justify-content: center;
         border-radius: 24px 24px 0 0; z-index: 1000; box-shadow: 0 -8px 24px rgba(0,0,0,0.15);
+        overflow: visible;
     }
+    .sidebar::before { display: none; }
     .logo, .user-profile { display: none; }
     .menu { flex-direction: row; width: 100%; justify-content: space-around; padding: 0.5rem; }
     .menu-item { padding: 0.8rem; border-radius: 16px; flex-direction: column; gap: 0.2rem; }

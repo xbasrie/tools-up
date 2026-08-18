@@ -12,6 +12,10 @@
     {
       "src": "*.css",
       "use": "@vercel/static"
+    },
+    {
+      "src": "sidebar.js",
+      "use": "@vercel/static"
     }
   ],
   "routes": [

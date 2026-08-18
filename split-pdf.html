@@ -105,53 +105,10 @@
     </style>
 </head>
 <body>
-    <div class="background-orbs">
-        <div class="orb orb-1"></div>
-        <div class="orb orb-2"></div>
-    </div>
 
     <div class="dashboard-container">
         <!-- Sidebar -->
-        <aside class="sidebar glass-panel">
-            <div class="logo">
-                <span class="material-symbols-outlined logo-icon">auto_awesome_mosaic</span>
-                <h2>Tools Kepegawaian</h2>
-            </div>
-            
-            <nav class="menu">
-                <a href="index.html" class="menu-item">
-                    <span class="material-symbols-outlined icon">calculate</span>
-                    <span class="text">Kalkulasi Masa Kerja</span>
-                </a>
-                <a href="kalkulator-tanggal.html" class="menu-item">
-                    <span class="material-symbols-outlined icon">event_note</span>
-                    <span class="text">Kalkulator Tanggal</span>
-                </a>
-                <div class="menu-group">
-                    <div class="menu-item parent-menu" onclick="this.parentElement.classList.toggle('open')">
-                        <div style="display: flex; align-items: center; gap: 1.2rem;">
-                            <span class="material-symbols-outlined icon">picture_as_pdf</span>
-                            <span class="text">Alat PDF</span>
-                        </div>
-                        <span class="material-symbols-outlined expand-icon" style="font-size: 1.2rem; transition: transform 0.3s;">expand_more</span>
-                    </div>
-                    <div class="sub-menu">
-                        <a href="compress-pdf.html" class="menu-item">
-                            <span class="material-symbols-outlined icon">compress</span>
-                            <span class="text">Kompres PDF</span>
-                        </a>
-                        <a href="merge-pdf.html" class="menu-item">
-                            <span class="material-symbols-outlined icon">library_add</span>
-                            <span class="text">Merge PDF</span>
-                        </a>
-                        <a href="split-pdf.html" class="menu-item active">
-                            <span class="material-symbols-outlined icon">vertical_split</span>
-                            <span class="text">Split PDF</span>
-                        </a>
-                    </div>
-                </div>
-            </nav>
-        </aside>
+        <div id="sidebar-container"></div>
 
         <!-- Main Content -->
         <main class="main-panel glass-panel">
@@ -597,5 +554,6 @@
             </style>
         </main>
     </div>
+    <script src="sidebar.js"></script>
 </body>
 </html>

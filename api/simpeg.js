@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
     // Handle CORS (Vercel serverless function needs CORS headers if called from different domain, though usually same-origin)
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');

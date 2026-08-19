@@ -15,7 +15,8 @@
     
     <!-- External Libraries -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-    <script src="https://balkan.app/js/OrgChart.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-org-chart@3.1.0"></script>
     
     <style>
         /* Specific Styles for Peta Jabatan */
@@ -426,49 +427,52 @@
             // Clean up _processed flag
             jabatanList.forEach(j => delete j._processed);
 
-            // Balkan OrgChart Init
+            // d3-org-chart Init
             const container = document.getElementById('orgchart');
-            container.innerHTML = ''; // Clear existing
+            container.innerHTML = ''; 
             
-            // Custom Template setup for Badges
-            OrgChart.templates.peta = Object.assign({}, OrgChart.templates.ana);
-            OrgChart.templates.peta.size = [250, 120];
-            OrgChart.templates.peta.node = '<rect x="0" y="0" height="{h}" width="{w}" fill="#ffffff" stroke-width="1" stroke="#aeaeae" rx="7" ry="7"></rect>';
-            OrgChart.templates.peta.field_0 = '<text style="font-size: 14px; font-weight: bold;" fill="#ffffff" x="125" y="40" text-anchor="middle" width="230" text-overflow="multiline">{val}</text>';
-            OrgChart.templates.peta.badge_b = '<rect x="30" y="80" width="80" height="25" rx="12" ry="12" fill="#10b981"></rect><text style="font-size: 12px; font-weight: bold;" fill="#ffffff" x="70" y="97" text-anchor="middle">B: {val}</text>';
-            OrgChart.templates.peta.badge_k = '<rect x="140" y="80" width="80" height="25" rx="12" ry="12" fill="#f59e0b"></rect><text style="font-size: 12px; font-weight: bold;" fill="#ffffff" x="180" y="97" text-anchor="middle">K: {val}</text>';
-
-            chart = new OrgChart(container, {
-                nodes: nodes,
-                template: "peta",
-                enableSearch: false,
-                mouseScrool: OrgChart.action.zoom,
-                nodeBinding: {
-                    field_0: "nama_jabatan",
-                    badge_b: "b",
-                    badge_k: "k"
-                },
-                tags: {
-                    "struktural": { template: "peta" },
-                    "fungsional": { template: "peta" },
-                    "pelaksana": { template: "peta" },
-                    "lainnya": { template: "peta" }
-                }
+            const d3Nodes = nodes.map(n => {
+                return {
+                    id: n.id,
+                    parentId: n.pid === null ? "" : n.pid,
+                    nama_jabatan: n.nama_jabatan,
+                    b: n.b,
+                    k: n.k,
+                    tags: n.tags
+                };
             });
             
-            // Apply Colors manually using CSS injection 
-            // Note: In balkan org chart, node elements have class 'balkan-orgchart-node' and tags as data-tag
-            const style = document.createElement('style');
-            style.innerHTML = `
-                [data-tag="struktural"] rect:first-child { fill: #1e3a8a !important; stroke: #1e3a8a !important; }
-                [data-tag="fungsional"] rect:first-child { fill: #0f766e !important; stroke: #0f766e !important; }
-                [data-tag="pelaksana"] rect:first-child { fill: #475569 !important; stroke: #475569 !important; }
-                [data-tag="lainnya"] rect:first-child { fill: #333333 !important; stroke: #333333 !important; }
-                
-                /* Keep text white */
-                [data-tag] text { fill: #ffffff !important; }
-            `;
-            container.appendChild(style);
+            chart = new d3.OrgChart()
+                .container('#orgchart')
+                .data(d3Nodes)
+                .nodeWidth(d => 250)
+                .nodeHeight(d => 120)
+                .childrenMargin(d => 40)
+                .compactMarginBetween(d => 15)
+                .compactMarginPair(d => 80)
+                .nodeContent(function(d) {
+                    const node = d.data;
+                    const tag = node.tags && node.tags.length > 0 ? node.tags[0] : "";
+                    
+                    let bgColor = "#333333";
+                    if (tag === "struktural") bgColor = "#1e3a8a";
+                    else if (tag === "fungsional") bgColor = "#0f766e";
+                    else if (tag === "pelaksana") bgColor = "#475569";
+                    
+                    return `
+                    <div style="font-family: 'Inter', sans-serif; background-color: ${bgColor}; width: ${d.width}px; height: ${d.height}px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.2); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; padding: 10px; box-sizing: border-box; position: relative;">
+                        <div style="font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 20px;">
+                            ${node.nama_jabatan}
+                        </div>
+                        <div style="display: flex; gap: 10px; position: absolute; bottom: 15px;">
+                            <div style="background-color: #10b981; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">B: ${node.b}</div>
+                            <div style="background-color: #f59e0b; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">K: ${node.k}</div>
+                        </div>
+                    </div>
+                    `;
+                })
+                .render()
+                .expandAll();
             
             updateSummaryTable(jabatanList);
         }
@@ -561,43 +565,48 @@
             const container = document.getElementById('orgchart');
             container.innerHTML = '';
             
-            // Re-apply templates
-            OrgChart.templates.peta = Object.assign({}, OrgChart.templates.ana);
-            OrgChart.templates.peta.size = [250, 120];
-            OrgChart.templates.peta.node = '<rect x="0" y="0" height="{h}" width="{w}" fill="#ffffff" stroke-width="1" stroke="#aeaeae" rx="7" ry="7"></rect>';
-            OrgChart.templates.peta.field_0 = '<text style="font-size: 14px; font-weight: bold;" fill="#ffffff" x="125" y="40" text-anchor="middle" width="230" text-overflow="multiline">{val}</text>';
-            OrgChart.templates.peta.badge_b = '<rect x="30" y="80" width="80" height="25" rx="12" ry="12" fill="#10b981"></rect><text style="font-size: 12px; font-weight: bold;" fill="#ffffff" x="70" y="97" text-anchor="middle">B: {val}</text>';
-            OrgChart.templates.peta.badge_k = '<rect x="140" y="80" width="80" height="25" rx="12" ry="12" fill="#f59e0b"></rect><text style="font-size: 12px; font-weight: bold;" fill="#ffffff" x="180" y="97" text-anchor="middle">K: {val}</text>';
-
-            chart = new OrgChart(container, {
-                nodes: nodes,
-                template: "peta",
-                enableSearch: true,
-                mouseScrool: OrgChart.action.zoom,
-                nodeBinding: {
-                    field_0: "nama_jabatan",
-                    badge_b: "b",
-                    badge_k: "k"
-                },
-                tags: {
-                    "struktural": { template: "peta" },
-                    "fungsional": { template: "peta" },
-                    "pelaksana": { template: "peta" },
-                    "lainnya": { template: "peta" }
-                }
+            const d3Nodes = nodes.map(n => {
+                return {
+                    id: n.id,
+                    parentId: n.pid === null ? "" : n.pid,
+                    nama_jabatan: n.nama_jabatan,
+                    b: n.b,
+                    k: n.k,
+                    tags: n.tags
+                };
             });
             
-            const style = document.createElement('style');
-            style.innerHTML = `
-                [data-tag="struktural"] rect:first-child { fill: #1e3a8a !important; stroke: #1e3a8a !important; }
-                [data-tag="fungsional"] rect:first-child { fill: #0f766e !important; stroke: #0f766e !important; }
-                [data-tag="pelaksana"] rect:first-child { fill: #475569 !important; stroke: #475569 !important; }
-                [data-tag="lainnya"] rect:first-child { fill: #333333 !important; stroke: #333333 !important; }
-                
-                /* Keep text white */
-                [data-tag] text { fill: #ffffff !important; }
-            `;
-            container.appendChild(style);
+            chart = new d3.OrgChart()
+                .container('#orgchart')
+                .data(d3Nodes)
+                .nodeWidth(d => 250)
+                .nodeHeight(d => 120)
+                .childrenMargin(d => 40)
+                .compactMarginBetween(d => 15)
+                .compactMarginPair(d => 80)
+                .nodeContent(function(d) {
+                    const node = d.data;
+                    const tag = node.tags && node.tags.length > 0 ? node.tags[0] : "";
+                    
+                    let bgColor = "#333333";
+                    if (tag === "struktural") bgColor = "#1e3a8a";
+                    else if (tag === "fungsional") bgColor = "#0f766e";
+                    else if (tag === "pelaksana") bgColor = "#475569";
+                    
+                    return `
+                    <div style="font-family: 'Inter', sans-serif; background-color: ${bgColor}; width: ${d.width}px; height: ${d.height}px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.2); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; padding: 10px; box-sizing: border-box; position: relative;">
+                        <div style="font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 20px;">
+                            ${node.nama_jabatan}
+                        </div>
+                        <div style="display: flex; gap: 10px; position: absolute; bottom: 15px;">
+                            <div style="background-color: #10b981; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">B: ${node.b}</div>
+                            <div style="background-color: #f59e0b; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">K: ${node.k}</div>
+                        </div>
+                    </div>
+                    `;
+                })
+                .render()
+                .expandAll();
             
             updateSummaryTable(globalJabatanList);
         }

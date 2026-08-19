@@ -1,98 +1,49 @@
 const express = require('express');
-const multer = require('multer');
 const cors = require('cors');
-const { PDFDocument } = require('pdf-lib');
-const path = require('path');
-const fs = require('fs');
+const axios = require('axios');
 
 const app = express();
-const port = 3000;
-
-// Middleware
 app.use(cors());
-app.use(express.static(path.join(__dirname))); // Serve static files from current directory
 app.use(express.json());
 
-// Set up multer for file uploads in memory
-const upload = multer({ storage: multer.memoryStorage() });
+// Proxy endpoint
+app.post('/api/simpeg', async (req, res) => {
+    const { url, cookie } = req.body;
+    
+    if (!url || !cookie) {
+        return res.status(400).json({ error: 'URL and Cookie are required' });
+    }
 
-// --- API: Merge PDF ---
-app.post('/api/merge-pdf', upload.array('files'), async (req, res) => {
     try {
-        if (!req.files || req.files.length === 0) {
-            return res.status(400).json({ error: 'Tidak ada file yang diunggah.' });
-        }
-
-        const mergedPdf = await PDFDocument.create();
-
-        for (const file of req.files) {
-            if (file.mimetype !== 'application/pdf') {
-                return res.status(400).json({ error: `File ${file.originalname} bukan PDF.` });
+        const response = await axios.get(url, {
+            headers: {
+                'Accept': '*/*',
+                'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
+                'Connection': 'keep-alive',
+                'Cookie': cookie,
+                'Referer': 'https://simpeg5.kemenag.go.id/data_pegawai',
+                'Sec-Fetch-Dest': 'empty',
+                'Sec-Fetch-Mode': 'cors',
+                'Sec-Fetch-Site': 'same-origin',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36',
+                'sec-ch-ua': '"Not=A?Brand";v="99", "Google Chrome";v="151", "Chromium";v="151"',
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"Windows"'
             }
-            
-            const pdfToMerge = await PDFDocument.load(file.buffer);
-            const copiedPages = await mergedPdf.copyPages(pdfToMerge, pdfToMerge.getPageIndices());
-            
-            copiedPages.forEach((page) => {
-                mergedPdf.addPage(page);
-            });
-        }
-
-        const mergedPdfBytes = await mergedPdf.save();
+        });
         
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', 'attachment; filename="merged-result.pdf"');
-        res.send(Buffer.from(mergedPdfBytes));
+        res.json(response.data);
     } catch (error) {
-        console.error('Error merging PDFs:', error);
-        res.status(500).json({ error: 'Terjadi kesalahan saat menggabungkan PDF.' });
+        console.error('Proxy Error for URL:', url, error.message);
+        res.status(500).json({ 
+            error: 'Gagal mengambil data dari SIMPEG',
+            details: error.response ? error.response.data : error.message
+        });
     }
 });
 
-// --- API: Compress PDF ---
-app.post('/api/compress-pdf', upload.array('files'), async (req, res) => {
-    try {
-        if (!req.files || req.files.length === 0) {
-            return res.status(400).json({ error: 'Tidak ada file yang diunggah.' });
-        }
-
-        // NOTE: True compression (e.g. downsampling images) requires external tools like Ghostscript.
-        // Here we use pdf-lib to load and save, which strips unused objects and metadata.
-        // It provides a "mock/light" compression. For a real robust compression to < 500kb, a third-party API or C++ lib is needed.
-        
-        // For multiple files, usually an API returns a ZIP. Since we return one response,
-        // if user sends multiple, we can merge them into one compressed, or zip them.
-        // But our UI compresses one by one conceptually. Let's handle a single file compression at a time.
-        // We will process the FIRST file if multiple are sent, or loop and zip. 
-        // Best approach for this simple API is to compress them one by one per request.
-        
-        const file = req.files[0];
-        if (file.mimetype !== 'application/pdf') {
-            return res.status(400).json({ error: `File ${file.originalname} bukan PDF.` });
-        }
-
-        const pdfDoc = await PDFDocument.load(file.buffer);
-        
-        // We can just save it. pdf-lib by default removes some unused metadata.
-        const compressedPdfBytes = await pdfDoc.save({ useObjectStreams: false });
-
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="compressed-${file.originalname}"`);
-        res.send(Buffer.from(compressedPdfBytes));
-
-    } catch (error) {
-        console.error('Error compressing PDF:', error);
-        res.status(500).json({ error: 'Terjadi kesalahan saat mengkompres PDF.' });
-    }
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`✅ Server Lokal SIMPEG Proxy berjalan di http://localhost:${PORT}`);
+    console.log(`Silakan buka aplikasi web Anda dan mulai proses generate DUK.`);
 });
-
-// Start Server (Hanya berjalan lokal, Vercel akan menggunakan module.exports)
-if (process.env.NODE_ENV !== 'production') {
-    app.listen(port, () => {
-        console.log(`Server berjalan di http://localhost:${port}`);
-        console.log(`Buka http://localhost:${port}/index.html di browser Anda.`);
-    });
-}
-
-// Ekspor app untuk Vercel Serverless
-module.exports = app;

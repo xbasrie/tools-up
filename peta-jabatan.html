@@ -275,30 +275,28 @@
 
         // --- 2. STRING EXTRACTION & CLASSIFICATION ---
         function parseJabatan(jabatanLengkap) {
-            // Clean extra spaces
             let text = jabatanLengkap.replace(/\s+/g, ' ').trim();
-            
             let satker = "Lainnya";
             let jabatanUtama = text;
             let bidangStudi = "";
             
-            // Check for SIASN/SIMPEG format: Jabatan (BidangStudi Satker)
             const parenMatch = text.match(/^(.*?)\((.*?)\)$/);
+            let hasSatkerInParen = false;
+            
             if (parenMatch) {
-                jabatanUtama = parenMatch[1].trim();
                 let detail = parenMatch[2].trim();
-                
-                // Extract Satker from inside the parenthesis
-                const satkerRegex = /(MAN\b.*|MIN\b.*|MTsN\b.*|MTs\b.*|MI\b.*|MA\b.*|SLTA\b.*|SLTP\b.*|SD\b.*|SMP\b.*|SMA\b.*|KUA\b.*|Kantor\b.*|Seksi\b.*|Penyelenggara\b.*)/i;
+                const satkerRegex = /\b(MAN\b.*|MIN\b.*|MTsN\b.*|MTs\b.*|MI\b.*|MA\b.*|SLTA\b.*|SLTP\b.*|SD\b.*|SMP\b.*|SMA\b.*|KUA\b.*|Kantor\b.*|Seksi\b.*|Penyelenggara\b.*)/i;
                 const kwMatch = detail.match(satkerRegex);
+                
                 if (kwMatch) {
                     satker = kwMatch[1].replace(/Provinsi\s+Jawa\s+Timur/i, "").trim();
                     bidangStudi = detail.substring(0, kwMatch.index).trim();
-                } else {
-                    bidangStudi = detail; 
+                    jabatanUtama = parenMatch[1].trim();
+                    hasSatkerInParen = true;
                 }
-            } else {
-                // Extract Bidang Studi first from the whole string
+            }
+            
+            if (!hasSatkerInParen) {
                 const bsRegex = /(?:Bidang\s+Studi|Mata\s+Pelajaran)\s+(.*?)(?=\spada\s|\sdi\s|,|$)/i;
                 const bMatch = text.match(bsRegex);
                 if(bMatch) {
@@ -306,24 +304,26 @@
                     text = text.replace(bMatch[0], "").trim();
                 }
                 
-                // Extract Unit Kerja (Satker)
-                const delimiterMatch = text.match(/(?:\spada\s|\sdi\s)(.+)/i);
-                if (delimiterMatch && delimiterMatch[1]) {
-                    satker = delimiterMatch[1].trim();
-                    jabatanUtama = text.substring(0, delimiterMatch.index).trim();
+                const delimiterMatch = text.match(/(.*?)(?:\spada\s|\sdi\s)(.+)/i);
+                if (delimiterMatch) {
+                    satker = delimiterMatch[2].trim();
+                    satker = satker.replace(/\(Eselon\s*:?\s*\d+\)/i, "").trim();
+                    satker = satker.replace(/Provinsi\s+Jawa\s+Timur/i, "").trim();
+                    jabatanUtama = delimiterMatch[1].trim();
                 } else {
-                    const satkerKeywords = /(Kelompok Jabatan Fungsional.*|Kantor Kementerian Agama.*|MAN\s*\d*.*|MIN\s*\d+.*|MTsN\s*\d+.*|KUA\s+.*|Seksi\s+.*|Sub Bagian\s+.*|Urusan Tata Usaha.*|Penyelenggara\s+.*)/i;
+                    const satkerKeywords = /\b(Kelompok Jabatan Fungsional.*|Kantor Kementerian Agama.*|MAN\s*\d*.*|MIN\s*\d+.*|MTsN\s*\d+.*|KUA\s+.*|Seksi\s+.*|Sub Bagian\s+.*|Urusan Tata Usaha.*|Penyelenggara\s+.*)/i;
                     const kwMatch = text.match(satkerKeywords);
                     if (kwMatch) {
                         satker = kwMatch[1].trim();
-                        jabatanUtama = text.replace(kwMatch[1], "").trim();
+                        satker = satker.replace(/\(Eselon\s*:?\s*\d+\)/i, "").trim();
+                        satker = satker.replace(/Provinsi\s+Jawa\s+Timur/i, "").trim();
+                        jabatanUtama = text.replace(kwMatch[0], "").trim();
                     } else {
                         jabatanUtama = text;
                     }
                 }
             }
             
-            // Clean and Normalize Strings to prevent duplicates
             satker = satker.replace(/^,|,$/g, "").trim().toUpperCase();
             
             jabatanUtama = jabatanUtama.replace(/^,|,$/g, "").trim();

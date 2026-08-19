@@ -282,27 +282,44 @@
             let jabatanUtama = text;
             let bidangStudi = "";
             
-            // Extract Bidang Studi first from the whole string
-            const bsRegex = /(?:Bidang\s+Studi|Mata\s+Pelajaran)\s+(.*?)(?=\spada\s|\sdi\s|,|$)/i;
-            const bMatch = text.match(bsRegex);
-            if(bMatch) {
-                bidangStudi = bMatch[1].trim();
-                text = text.replace(bMatch[0], "").trim();
-            }
-            
-            // Extract Unit Kerja (Satker)
-            const delimiterMatch = text.match(/(?:\spada\s|\sdi\s)(.+)/i);
-            if (delimiterMatch && delimiterMatch[1]) {
-                satker = delimiterMatch[1].trim();
-                jabatanUtama = text.substring(0, delimiterMatch.index).trim();
-            } else {
-                const satkerKeywords = /(Kelompok Jabatan Fungsional.*|Kantor Kementerian Agama.*|MAN\s*\d*.*|MIN\s*\d+.*|MTsN\s*\d+.*|KUA\s+Kecamatan.*|KUA\s+Kec\..*|Sub Bagian Tata Usaha.*|Urusan Tata Usaha.*)/i;
-                const kwMatch = text.match(satkerKeywords);
+            // Check for SIASN/SIMPEG format: Jabatan (BidangStudi Satker)
+            const parenMatch = text.match(/^(.*?)\((.*?)\)$/);
+            if (parenMatch) {
+                jabatanUtama = parenMatch[1].trim();
+                let detail = parenMatch[2].trim();
+                
+                // Extract Satker from inside the parenthesis
+                const satkerRegex = /(MAN\b.*|MIN\b.*|MTsN\b.*|MTs\b.*|MI\b.*|MA\b.*|SLTA\b.*|SLTP\b.*|SD\b.*|SMP\b.*|SMA\b.*|KUA\b.*|Kantor\b.*|Seksi\b.*|Penyelenggara\b.*)/i;
+                const kwMatch = detail.match(satkerRegex);
                 if (kwMatch) {
-                    satker = kwMatch[1].trim();
-                    jabatanUtama = text.replace(kwMatch[1], "").trim();
+                    satker = kwMatch[1].replace(/Provinsi\s+Jawa\s+Timur/i, "").trim();
+                    bidangStudi = detail.substring(0, kwMatch.index).trim();
                 } else {
-                    jabatanUtama = text;
+                    bidangStudi = detail; 
+                }
+            } else {
+                // Extract Bidang Studi first from the whole string
+                const bsRegex = /(?:Bidang\s+Studi|Mata\s+Pelajaran)\s+(.*?)(?=\spada\s|\sdi\s|,|$)/i;
+                const bMatch = text.match(bsRegex);
+                if(bMatch) {
+                    bidangStudi = bMatch[1].trim();
+                    text = text.replace(bMatch[0], "").trim();
+                }
+                
+                // Extract Unit Kerja (Satker)
+                const delimiterMatch = text.match(/(?:\spada\s|\sdi\s)(.+)/i);
+                if (delimiterMatch && delimiterMatch[1]) {
+                    satker = delimiterMatch[1].trim();
+                    jabatanUtama = text.substring(0, delimiterMatch.index).trim();
+                } else {
+                    const satkerKeywords = /(Kelompok Jabatan Fungsional.*|Kantor Kementerian Agama.*|MAN\s*\d*.*|MIN\s*\d+.*|MTsN\s*\d+.*|KUA\s+.*|Seksi\s+.*|Sub Bagian\s+.*|Urusan Tata Usaha.*|Penyelenggara\s+.*)/i;
+                    const kwMatch = text.match(satkerKeywords);
+                    if (kwMatch) {
+                        satker = kwMatch[1].trim();
+                        jabatanUtama = text.replace(kwMatch[1], "").trim();
+                    } else {
+                        jabatanUtama = text;
+                    }
                 }
             }
             

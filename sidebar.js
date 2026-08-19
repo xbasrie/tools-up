@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <span class="material-symbols-outlined icon">event_note</span>
             <span class="text">Kalkulator Tanggal</span>
         </a>
-        <a href="peta-jabatan.html" class="menu-item">
+        <a href="peta-jabatan.html" class="menu-item" style="display: none;">
             <span class="material-symbols-outlined icon">account_tree</span>
             <span class="text">Peta Jabatan</span>
         </a>

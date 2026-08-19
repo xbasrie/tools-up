@@ -227,7 +227,7 @@
         
         async function fetchSIMPEG(url, cookie) {
             try {
-                const res = await fetch('http://localhost:3000/api/simpeg', {
+                const res = await fetch('/api/simpeg', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url, cookie })

@@ -1,13 +1,23 @@
-const express = require('express');
-const cors = require('cors');
 const axios = require('axios');
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+export default async function handler(req, res) {
+    // Handle CORS (Vercel serverless function needs CORS headers if called from different domain, though usually same-origin)
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    res.setHeader(
+        'Access-Control-Allow-Headers',
+        'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    );
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+    }
 
-// Proxy endpoint
-app.post('/api/simpeg', async (req, res) => {
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method Not Allowed' });
+    }
+
     const { url, cookie } = req.body;
     
     if (!url || !cookie) {
@@ -32,7 +42,7 @@ app.post('/api/simpeg', async (req, res) => {
             }
         });
         
-        res.json(response.data);
+        res.status(200).json(response.data);
     } catch (error) {
         console.error('Proxy Error for URL:', url, error.message);
         res.status(500).json({ 
@@ -40,10 +50,4 @@ app.post('/api/simpeg', async (req, res) => {
             details: error.response ? error.response.data : error.message
         });
     }
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`✅ Server Lokal SIMPEG Proxy berjalan di http://localhost:${PORT}`);
-    console.log(`Silakan buka aplikasi web Anda dan mulai proses generate DUK.`);
-});
+}

@@ -129,8 +129,8 @@
                                 </select>
                             </div>
                             <div class="action-buttons" style="display: flex; gap: 0.5rem; align-items: flex-end;">
-                                <button id="btn-export-pdf" class="btn-primary glass-btn" style="padding: 0.8rem 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                                    <span class="material-symbols-outlined">picture_as_pdf</span> Export PDF
+                                <button id="btn-export-svg" class="btn-primary glass-btn" style="padding: 0.8rem 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                                    <span class="material-symbols-outlined">polyline</span> Export SVG
                                 </button>
                                 <button id="btn-export-png" class="btn-primary glass-btn" style="padding: 0.8rem 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
                                     <span class="material-symbols-outlined">image</span> Export PNG
@@ -692,18 +692,18 @@
         };
 
         // Export Actions
-        document.getElementById('btn-export-pdf').addEventListener('click', () => {
+        document.getElementById('btn-export-svg').addEventListener('click', () => {
             if (chart) {
-                chart.exportPDF({
-                    format: "A4",
-                    orientation: "landscape"
-                });
+                chart.exportSvg();
             }
         });
         
         document.getElementById('btn-export-png').addEventListener('click', () => {
             if (chart) {
-                chart.exportPNG();
+                chart.exportImg({
+                    full: true,
+                    backgroundColor: '#0f172a'
+                });
             }
         });
         

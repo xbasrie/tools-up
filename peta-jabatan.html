@@ -275,33 +275,46 @@
 
         // --- 2. STRING EXTRACTION & CLASSIFICATION ---
         function parseJabatan(jabatanLengkap) {
+            // Clean extra spaces
+            let text = jabatanLengkap.replace(/\s+/g, ' ').trim();
+            
             let satker = "Lainnya";
-            let jabatanUtama = jabatanLengkap;
+            let jabatanUtama = text;
             let bidangStudi = "";
             
-            // a. Extract Unit Kerja (Satker)
-            const delimiterMatch = jabatanLengkap.match(/(?:\spada\s|\sdi\s)(.+)/i);
+            // Extract Bidang Studi first from the whole string
+            const bsRegex = /(?:Bidang\s+Studi|Mata\s+Pelajaran)\s+(.*?)(?=\spada\s|\sdi\s|,|$)/i;
+            const bMatch = text.match(bsRegex);
+            if(bMatch) {
+                bidangStudi = bMatch[1].trim();
+                text = text.replace(bMatch[0], "").trim();
+            }
+            
+            // Extract Unit Kerja (Satker)
+            const delimiterMatch = text.match(/(?:\spada\s|\sdi\s)(.+)/i);
             if (delimiterMatch && delimiterMatch[1]) {
                 satker = delimiterMatch[1].trim();
-                jabatanUtama = jabatanLengkap.substring(0, delimiterMatch.index).trim();
+                jabatanUtama = text.substring(0, delimiterMatch.index).trim();
             } else {
-                const satkerKeywords = /(Kelompok Jabatan Fungsional.*|Kantor Kementerian Agama.*|MAN.*|MIN\s*\d+.*|MTsN\s*\d+.*|KUA\s+Kecamatan.*|KUA\s+Kec\..*|Sub Bagian Tata Usaha.*|Urusan Tata Usaha.*)/i;
-                const kwMatch = jabatanLengkap.match(satkerKeywords);
+                const satkerKeywords = /(Kelompok Jabatan Fungsional.*|Kantor Kementerian Agama.*|MAN\s*\d*.*|MIN\s*\d+.*|MTsN\s*\d+.*|KUA\s+Kecamatan.*|KUA\s+Kec\..*|Sub Bagian Tata Usaha.*|Urusan Tata Usaha.*)/i;
+                const kwMatch = text.match(satkerKeywords);
                 if (kwMatch) {
                     satker = kwMatch[1].trim();
-                    jabatanUtama = jabatanLengkap.replace(kwMatch[1], "").trim();
+                    jabatanUtama = text.replace(kwMatch[1], "").trim();
+                } else {
+                    jabatanUtama = text;
                 }
             }
             
-            // b. Extract Bidang Studi
-            const bidangMatch = jabatanUtama.match(/Bidang\s+Studi\s+(.*)/i);
-            if (bidangMatch) {
-                bidangStudi = bidangMatch[1].trim();
-                jabatanUtama = jabatanUtama.replace(bidangMatch[0], "").trim();
-            }
+            // Clean and Normalize Strings to prevent duplicates
+            satker = satker.replace(/^,|,$/g, "").trim().toUpperCase();
             
-            // Clean up trailing commas or spaces
-            jabatanUtama = jabatanUtama.replace(/,$/, "").trim();
+            jabatanUtama = jabatanUtama.replace(/^,|,$/g, "").trim();
+            jabatanUtama = jabatanUtama.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+            
+            if (bidangStudi) {
+                bidangStudi = bidangStudi.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+            }
             
             // c. Classify Jenis Jabatan
             let jenis = "Lainnya";

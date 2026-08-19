@@ -433,8 +433,8 @@
             
             const d3Nodes = nodes.map(n => {
                 return {
-                    id: n.id,
-                    parentId: n.pid === null ? "" : n.pid,
+                    id: String(n.id),
+                    parentId: n.pid === null ? "" : String(n.pid),
                     nama_jabatan: n.nama_jabatan,
                     b: n.b,
                     k: n.k,
@@ -567,8 +567,8 @@
             
             const d3Nodes = nodes.map(n => {
                 return {
-                    id: n.id,
-                    parentId: n.pid === null ? "" : n.pid,
+                    id: String(n.id),
+                    parentId: n.pid === null ? "" : String(n.pid),
                     nama_jabatan: n.nama_jabatan,
                     b: n.b,
                     k: n.k,

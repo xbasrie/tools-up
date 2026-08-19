@@ -405,6 +405,7 @@
                     id: rootId,
                     pid: null,
                     nama_jabatan: r.nama_jabatan,
+                    satker: satkerName,
                     b: r.b,
                     k: r.k,
                     tags: [r.jenis.toLowerCase()]
@@ -415,7 +416,8 @@
                 nodes.push({
                     id: rootId,
                     pid: null,
-                    nama_jabatan: "Kepala " + satkerName,
+                    nama_jabatan: "Kepala",
+                    satker: satkerName,
                     b: 0,
                     k: 1, // Assumption if missing
                     tags: ["struktural"]
@@ -431,6 +433,7 @@
                     id: idCounter,
                     pid: rootId,
                     nama_jabatan: j.nama_jabatan,
+                    satker: satkerName,
                     b: j.b,
                     k: j.k,
                     tags: [j.jenis.toLowerCase()]
@@ -450,6 +453,7 @@
                     id: String(n.id),
                     parentId: n.pid === null ? "" : String(n.pid),
                     nama_jabatan: n.nama_jabatan,
+                    satker: n.satker,
                     b: n.b,
                     k: n.k,
                     tags: n.tags
@@ -475,9 +479,10 @@
                     
                     return `
                     <div style="font-family: 'Inter', sans-serif; background-color: ${bgColor}; width: ${d.width}px; height: ${d.height}px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.2); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; padding: 10px; box-sizing: border-box; position: relative;">
-                        <div style="font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 20px;">
+                        <div style="font-size: 14px; font-weight: bold; text-align: center; margin-bottom: ${node.satker ? '5px' : '20px'};">
                             ${node.nama_jabatan}
                         </div>
+                        ${node.satker ? `<div style="font-size: 11px; text-align: center; opacity: 0.8; margin-bottom: 15px;">${node.satker}</div>` : ''}
                         <div style="display: flex; gap: 10px; position: absolute; bottom: 15px;">
                             <div style="background-color: #10b981; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">B: ${node.b}</div>
                             <div style="background-color: #f59e0b; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">K: ${node.k}</div>
@@ -498,6 +503,7 @@
                 id: globalRootId,
                 pid: null,
                 nama_jabatan: "Kepala Kantor Kementerian Agama Kota Surabaya",
+                satker: "Kemenag Kota Surabaya",
                 b: 1,
                 k: 1,
                 tags: ["struktural"]
@@ -536,7 +542,8 @@
                     nodes.push({
                         id: subRootId,
                         pid: globalRootId,
-                        nama_jabatan: r.nama_jabatan + " (" + satkerName + ")",
+                        nama_jabatan: r.nama_jabatan,
+                        satker: satkerName,
                         b: r.b,
                         k: r.k,
                         tags: [r.jenis.toLowerCase()]
@@ -547,7 +554,8 @@
                     nodes.push({
                         id: subRootId,
                         pid: globalRootId,
-                        nama_jabatan: "Kepala " + satkerName,
+                        nama_jabatan: "Kepala",
+                        satker: satkerName,
                         b: 0,
                         k: 1,
                         tags: ["struktural"]
@@ -563,6 +571,7 @@
                         id: idCounter,
                         pid: subRootId,
                         nama_jabatan: j.nama_jabatan,
+                        satker: satkerName,
                         b: j.b,
                         k: j.k,
                         tags: [j.jenis.toLowerCase()]
@@ -584,6 +593,7 @@
                     id: String(n.id),
                     parentId: n.pid === null ? "" : String(n.pid),
                     nama_jabatan: n.nama_jabatan,
+                    satker: n.satker,
                     b: n.b,
                     k: n.k,
                     tags: n.tags
@@ -609,9 +619,10 @@
                     
                     return `
                     <div style="font-family: 'Inter', sans-serif; background-color: ${bgColor}; width: ${d.width}px; height: ${d.height}px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.2); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; padding: 10px; box-sizing: border-box; position: relative;">
-                        <div style="font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 20px;">
+                        <div style="font-size: 14px; font-weight: bold; text-align: center; margin-bottom: ${node.satker ? '5px' : '20px'};">
                             ${node.nama_jabatan}
                         </div>
+                        ${node.satker ? `<div style="font-size: 11px; text-align: center; opacity: 0.8; margin-bottom: 15px;">${node.satker}</div>` : ''}
                         <div style="display: flex; gap: 10px; position: absolute; bottom: 15px;">
                             <div style="background-color: #10b981; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">B: ${node.b}</div>
                             <div style="background-color: #f59e0b; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">K: ${node.k}</div>

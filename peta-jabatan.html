@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tools Kepegawaian - Peta Jabatan</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <!-- Custom CSS (Assuming style.css exists in project) -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://balkan.app/js/OrgChart.js"></script>
+    
+    <style>
+        /* Specific Styles for Peta Jabatan */
+        .upload-area {
+            border: 2px dashed rgba(255,255,255,0.3);
+            border-radius: 12px;
+            padding: 3rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        .upload-area:hover, .upload-area.dragover {
+            border-color: var(--accent, #00e5ff);
+            background: rgba(0, 229, 255, 0.05);
+        }
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+        
+        #orgchart {
+            width: 100%;
+            height: 600px;
+            background-color: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            margin-top: 1rem;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        /* Balkan OrgChart Custom Styles */
+        .balkan-orgchart-node {
+            cursor: default;
+        }
+        
+        .controls-row {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 2rem;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .summary-table th, .summary-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .summary-table th {
+            background: rgba(255,255,255,0.05);
+            font-weight: 600;
+            color: var(--accent, #00e5ff);
+        }
+        
+        .summary-table tr:hover {
+            background: rgba(255,255,255,0.02);
+        }
+        
+        /* Node Badges in OrgChart */
+        .node-struktural rect { fill: #1e3a8a !important; }
+        .node-fungsional rect { fill: #0f766e !important; }
+        .node-pelaksana rect { fill: #475569 !important; }
+        .node-lainnya rect { fill: #333333 !important; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <div id="sidebar-container"></div>
+
+        <!-- Main Content -->
+        <main class="main-panel glass-panel">
+            <header class="top-bar">
+                <div class="page-title">
+                    <h1>Peta Jabatan</h1>
+                    <p class="subtitle">Visualisasi Struktur Organisasi & Analisis Kebutuhan dari Data DUK</p>
+                </div>
+            </header>
+            
+            <section class="content-area">
+                <div class="card glass-card full-width" style="padding: 2.5rem;">
+                    
+                    <!-- Upload Area -->
+                    <div id="upload-zone" class="upload-area" onclick="document.getElementById('excel-file').click()">
+                        <span class="material-symbols-outlined upload-icon">cloud_upload</span>
+                        <h3>Upload File Excel DUK</h3>
+                        <p style="color: var(--text-secondary); margin-top: 0.5rem;">Drag & drop file .xlsx di sini atau klik untuk memilih file</p>
+                        <input type="file" id="excel-file" accept=".xlsx, .xls" style="display: none;">
+                    </div>
+                    
+                    <div id="workspace" style="display: none;">
+                        <div class="controls-row">
+                            <div class="form-group" style="flex: 1;">
+                                <label style="display:block; margin-bottom: 0.5rem; color: var(--text-secondary); font-weight: 500;">Pilih Unit Kerja (Satker)</label>
+                                <select id="satker-select" class="glass-input-field" style="width: 100%; padding: 0.8rem; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 8px;">
+                                    <!-- Options will be populated here -->
+                                </select>
+                            </div>
+                            <div class="action-buttons" style="display: flex; gap: 0.5rem; align-items: flex-end;">
+                                <button id="btn-export-pdf" class="btn-primary glass-btn" style="padding: 0.8rem 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                                    <span class="material-symbols-outlined">picture_as_pdf</span> Export PDF
+                                </button>
+                                <button id="btn-export-png" class="btn-primary glass-btn" style="padding: 0.8rem 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                                    <span class="material-symbols-outlined">image</span> Export PNG
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Org Chart Container -->
+                        <div id="orgchart"></div>
+                        
+                        <!-- Summary Table -->
+                        <h3 style="margin-top: 2.5rem; margin-bottom: 1rem; color: var(--text-primary); font-size: 1.25rem;">Rekapitulasi Jabatan</h3>
+                        <div style="overflow-x: auto;">
+                            <table class="summary-table" id="summary-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nama Jabatan</th>
+                                        <th>Jenis Jabatan</th>
+                                        <th style="text-align: center;">Bezetting (B)</th>
+                                        <th style="text-align: center;">Kebutuhan (K)</th>
+                                        <th style="text-align: center;">+/-</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="sidebar.js"></script>
+    
+    <script>
+        // Data Store
+        let parsedData = [];
+        let satkers = {};
+        let chart = null;
+
+        // --- 1. FILE UPLOAD & PARSING LOGIC ---
+        const dropZone = document.getElementById('upload-zone');
+        const fileInput = document.getElementById('excel-file');
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+        });
+
+        dropZone.addEventListener('drop', handleDrop, false);
+        fileInput.addEventListener('change', handleFileSelect, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            handleFiles(files);
+        }
+
+        function handleFiles(files) {
+            if (files.length === 0) return;
+            const file = files[0];
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array', cellText: false, cellDates: true});
+                
+                // Get first sheet
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                
+                // Convert to json, read as string matrix
+                const jsonData = XLSX.utils.sheet_to_json(sheet, {
+                    header: 1,
+                    raw: false, // force format as string
+                    defval: ""
+                });
+                
+                processExcelData(jsonData);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processExcelData(data) {
+            // User requested to skip title/header metadata and read starting from row index 4.
+            // So we skip the first 3 rows.
+            const rows = data.slice(3);
+            
+            parsedData = [];
+            
+            rows.forEach(row => {
+                // Column Mapping:
+                // Col 1 = index 1 (B), Col 2 = index 2 (C), Col 5 = index 5 (F)
+                const nip = (row[1] || "").toString().trim();
+                const nama = (row[2] || "").toString().trim();
+                const jabatanLengkap = (row[5] || "").toString().trim();
+                
+                if (nip && jabatanLengkap) {
+                    const parsed = parseJabatan(jabatanLengkap);
+                    parsedData.push({
+                        nip: nip,
+                        nama: nama,
+                        jabatanLengkap: jabatanLengkap,
+                        ...parsed
+                    });
+                }
+            });
+            
+            buildSatkerData();
+            
+            // UI Updates
+            document.getElementById('upload-zone').style.display = 'none';
+            document.getElementById('workspace').style.display = 'block';
+            
+            populateSatkerDropdown();
+            
+            // Initial render
+            const firstSatker = Object.keys(satkers)[0];
+            if(firstSatker) {
+                renderOrgChart(firstSatker);
+            }
+        }
+
+        // --- 2. STRING EXTRACTION & CLASSIFICATION ---
+        function parseJabatan(jabatanLengkap) {
+            let satker = "Lainnya";
+            let jabatanUtama = jabatanLengkap;
+            let bidangStudi = "";
+            
+            // a. Extract Unit Kerja (Satker)
+            const delimiterMatch = jabatanLengkap.match(/(?:\spada\s|\sdi\s)(.+)/i);
+            if (delimiterMatch && delimiterMatch[1]) {
+                satker = delimiterMatch[1].trim();
+                jabatanUtama = jabatanLengkap.substring(0, delimiterMatch.index).trim();
+            } else {
+                const satkerKeywords = /(Kelompok Jabatan Fungsional.*|Kantor Kementerian Agama.*|MAN.*|MIN\s*\d+.*|MTsN\s*\d+.*|KUA\s+Kecamatan.*|KUA\s+Kec\..*|Sub Bagian Tata Usaha.*|Urusan Tata Usaha.*)/i;
+                const kwMatch = jabatanLengkap.match(satkerKeywords);
+                if (kwMatch) {
+                    satker = kwMatch[1].trim();
+                    jabatanUtama = jabatanLengkap.replace(kwMatch[1], "").trim();
+                }
+            }
+            
+            // b. Extract Bidang Studi
+            const bidangMatch = jabatanUtama.match(/Bidang\s+Studi\s+(.*)/i);
+            if (bidangMatch) {
+                bidangStudi = bidangMatch[1].trim();
+                jabatanUtama = jabatanUtama.replace(bidangMatch[0], "").trim();
+            }
+            
+            // Clean up trailing commas or spaces
+            jabatanUtama = jabatanUtama.replace(/,$/, "").trim();
+            
+            // c. Classify Jenis Jabatan
+            let jenis = "Lainnya";
+            const j = jabatanUtama.toLowerCase();
+            
+            if (/kepala|kasubbag|kasi|penyelenggara|kaur/.test(j)) {
+                jenis = "Struktural";
+            } else if (/jabatan pelaksana|layanan operasional|pengadministrasi|pengelola|pramu|pengemudi|satpam|teknisi|pelaksana administrasi|petugas|penelaah/.test(j)) {
+                jenis = "Pelaksana";
+            } else if (/guru|penghulu|penyuluh|pengawas|pranata|arsiparis|ahli|terampil|mahir|penyelia|analis|perencana/.test(j)) {
+                jenis = "Fungsional";
+            }
+            
+            return { satker, jabatanUtama, bidangStudi, jenis };
+        }
+
+        // --- 3. AGGREGATION & HIERARCHY MAPPING ---
+        function buildSatkerData() {
+            satkers = {};
+            
+            parsedData.forEach(emp => {
+                const s = emp.satker;
+                if (!satkers[s]) {
+                    satkers[s] = {
+                        employees: [],
+                        jabatanAgg: {}
+                    };
+                }
+                
+                satkers[s].employees.push(emp);
+                
+                // Combine Jabatan and Bidang Studi for display
+                const jKey = emp.bidangStudi ? `${emp.jabatanUtama} (${emp.bidangStudi})` : emp.jabatanUtama;
+                
+                if (!satkers[s].jabatanAgg[jKey]) {
+                    satkers[s].jabatanAgg[jKey] = {
+                        nama_jabatan: jKey,
+                        jenis: emp.jenis,
+                        b: 0,
+                        k: 0
+                    };
+                }
+                
+                satkers[s].jabatanAgg[jKey].b += 1;
+                satkers[s].jabatanAgg[jKey].k = satkers[s].jabatanAgg[jKey].b; // Default K = B
+            });
+        }
+        
+        function populateSatkerDropdown() {
+            const select = document.getElementById('satker-select');
+            select.innerHTML = '';
+            
+            Object.keys(satkers).sort().forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s;
+                opt.textContent = s;
+                select.appendChild(opt);
+            });
+            
+            select.addEventListener('change', (e) => {
+                renderOrgChart(e.target.value);
+            });
+        }
+
+        // --- 4. VISUAL & UI REQUIREMENTS ---
+        function renderOrgChart(satkerName) {
+            const satkerData = satkers[satkerName];
+            if (!satkerData) return;
+            
+            const agg = satkerData.jabatanAgg;
+            let nodes = [];
+            
+            // Find Struktural node to act as Root
+            let rootId = null;
+            let idCounter = 1;
+            
+            const jabatanList = Object.values(agg);
+            const strukturalNodes = jabatanList.filter(j => j.jenis === "Struktural");
+            
+            if (strukturalNodes.length > 0) {
+                rootId = idCounter;
+                const r = strukturalNodes[0];
+                nodes.push({
+                    id: rootId,
+                    pid: null,
+                    nama_jabatan: r.nama_jabatan,
+                    b: r.b,
+                    k: r.k,
+                    tags: [r.jenis.toLowerCase()]
+                });
+                r._processed = true;
+            } else {
+                rootId = idCounter;
+                nodes.push({
+                    id: rootId,
+                    pid: null,
+                    nama_jabatan: "Kepala " + satkerName,
+                    b: 0,
+                    k: 1, // Assumption if missing
+                    tags: ["struktural"]
+                });
+            }
+            
+            idCounter++;
+            
+            // Add other nodes (Fungsional, Pelaksana, Lainnya)
+            jabatanList.forEach(j => {
+                if (j._processed) return;
+                nodes.push({
+                    id: idCounter,
+                    pid: rootId,
+                    nama_jabatan: j.nama_jabatan,
+                    b: j.b,
+                    k: j.k,
+                    tags: [j.jenis.toLowerCase()]
+                });
+                idCounter++;
+            });
+            
+            // Clean up _processed flag
+            jabatanList.forEach(j => delete j._processed);
+
+            // Balkan OrgChart Init
+            const container = document.getElementById('orgchart');
+            container.innerHTML = ''; // Clear existing
+            
+            // Custom Template setup for Badges
+            OrgChart.templates.peta = Object.assign({}, OrgChart.templates.ana);
+            OrgChart.templates.peta.size = [250, 120];
+            OrgChart.templates.peta.node = '<rect x="0" y="0" height="{h}" width="{w}" fill="#ffffff" stroke-width="1" stroke="#aeaeae" rx="7" ry="7"></rect>';
+            OrgChart.templates.peta.field_0 = '<text style="font-size: 14px; font-weight: bold;" fill="#ffffff" x="125" y="40" text-anchor="middle" width="230" text-overflow="multiline">{val}</text>';
+            OrgChart.templates.peta.badge_b = '<rect x="30" y="80" width="80" height="25" rx="12" ry="12" fill="#10b981"></rect><text style="font-size: 12px; font-weight: bold;" fill="#ffffff" x="70" y="97" text-anchor="middle">B: {val}</text>';
+            OrgChart.templates.peta.badge_k = '<rect x="140" y="80" width="80" height="25" rx="12" ry="12" fill="#f59e0b"></rect><text style="font-size: 12px; font-weight: bold;" fill="#ffffff" x="180" y="97" text-anchor="middle">K: {val}</text>';
+
+            chart = new OrgChart(container, {
+                nodes: nodes,
+                template: "peta",
+                enableSearch: false,
+                mouseScrool: OrgChart.action.zoom,
+                nodeBinding: {
+                    field_0: "nama_jabatan",
+                    badge_b: "b",
+                    badge_k: "k"
+                },
+                tags: {
+                    "struktural": { template: "peta" },
+                    "fungsional": { template: "peta" },
+                    "pelaksana": { template: "peta" },
+                    "lainnya": { template: "peta" }
+                }
+            });
+            
+            // Apply Colors manually using CSS injection 
+            // Note: In balkan org chart, node elements have class 'balkan-orgchart-node' and tags as data-tag
+            const style = document.createElement('style');
+            style.innerHTML = `
+                [data-tag="struktural"] rect:first-child { fill: #1e3a8a !important; stroke: #1e3a8a !important; }
+                [data-tag="fungsional"] rect:first-child { fill: #0f766e !important; stroke: #0f766e !important; }
+                [data-tag="pelaksana"] rect:first-child { fill: #475569 !important; stroke: #475569 !important; }
+                [data-tag="lainnya"] rect:first-child { fill: #333333 !important; stroke: #333333 !important; }
+                
+                /* Keep text white */
+                [data-tag] text { fill: #ffffff !important; }
+            `;
+            container.appendChild(style);
+            
+            updateSummaryTable(jabatanList);
+        }
+        
+        function updateSummaryTable(jabatanList) {
+            const tbody = document.querySelector('#summary-table tbody');
+            tbody.innerHTML = '';
+            
+            let totalB = 0;
+            let totalK = 0;
+            
+            jabatanList.sort((a,b) => a.jenis.localeCompare(b.jenis)).forEach(j => {
+                const diff = j.b - j.k;
+                const diffColor = diff > 0 ? '#10b981' : (diff < 0 ? '#ef4444' : 'var(--text-primary)');
+                
+                totalB += j.b;
+                totalK += j.k;
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight: 500;">${j.nama_jabatan}</td>
+                    <td>
+                        <span style="padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; background: rgba(255,255,255,0.1);">
+                            ${j.jenis}
+                        </span>
+                    </td>
+                    <td style="text-align: center;">${j.b}</td>
+                    <td style="text-align: center;">
+                        <input type="number" min="0" value="${j.k}" class="glass-input-field" style="width: 80px; padding: 0.4rem; text-align: center; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 4px;" 
+                        onchange="updateKebutuhan('${j.nama_jabatan}', this.value)">
+                    </td>
+                    <td style="text-align: center; color: ${diffColor}; font-weight: bold;">${diff > 0 ? '+'+diff : diff}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            // Total Row
+            const trTotal = document.createElement('tr');
+            trTotal.style.backgroundColor = 'rgba(0, 229, 255, 0.1)';
+            trTotal.style.fontWeight = 'bold';
+            const diff = totalB - totalK;
+            const diffColor = diff > 0 ? '#10b981' : (diff < 0 ? '#ef4444' : 'var(--text-primary)');
+            trTotal.innerHTML = `
+                <td colspan="2" style="text-align: right;">TOTAL:</td>
+                <td style="text-align: center;">${totalB}</td>
+                <td style="text-align: center;">${totalK}</td>
+                <td style="text-align: center; color: ${diffColor};">${diff > 0 ? '+'+diff : diff}</td>
+            `;
+            tbody.appendChild(trTotal);
+        }
+        
+        window.updateKebutuhan = function(nama_jabatan, newVal) {
+            const satker = document.getElementById('satker-select').value;
+            if (satkers[satker] && satkers[satker].jabatanAgg[nama_jabatan]) {
+                satkers[satker].jabatanAgg[nama_jabatan].k = parseInt(newVal) || 0;
+                renderOrgChart(satker); // Re-render to update badges and table
+            }
+        };
+
+        // Export Actions
+        document.getElementById('btn-export-pdf').addEventListener('click', () => {
+            if (chart) {
+                chart.exportPDF({
+                    format: "A4",
+                    orientation: "landscape"
+                });
+            }
+        });
+        
+        document.getElementById('btn-export-png').addEventListener('click', () => {
+            if (chart) {
+                chart.exportPNG();
+            }
+        });
+        
+    </script>
+</body>
+</html>

@@ -16,6 +16,10 @@ document.addEventListener("DOMContentLoaded", () => {
             <span class="material-symbols-outlined icon">event_note</span>
             <span class="text">Kalkulator Tanggal</span>
         </a>
+        <a href="peta-jabatan.html" class="menu-item">
+            <span class="material-symbols-outlined icon">account_tree</span>
+            <span class="text">Peta Jabatan</span>
+        </a>
         <div class="menu-group">
             <div class="menu-item parent-menu" onclick="this.parentElement.classList.toggle('open')">
                 <div style="display: flex; align-items: center; gap: 1.2rem;">

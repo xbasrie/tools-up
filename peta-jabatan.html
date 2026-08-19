@@ -265,9 +265,9 @@
             populateSatkerDropdown();
             
             // Initial render
-            const firstSatker = Object.keys(satkers)[0];
-            if(firstSatker) {
-                renderOrgChart(firstSatker);
+            if(Object.keys(satkers).length > 0) {
+                document.getElementById('satker-select').value = 'all';
+                renderFullOrgChart();
             }
         }
 
@@ -350,7 +350,7 @@
         
         function populateSatkerDropdown() {
             const select = document.getElementById('satker-select');
-            select.innerHTML = '';
+            select.innerHTML = '<option value="all">Kemenag Kota Surabaya (Semua Satker)</option>';
             
             Object.keys(satkers).sort().forEach(s => {
                 const opt = document.createElement('option');
@@ -360,7 +360,11 @@
             });
             
             select.addEventListener('change', (e) => {
-                renderOrgChart(e.target.value);
+                if (e.target.value === 'all') {
+                    renderFullOrgChart();
+                } else {
+                    renderOrgChart(e.target.value);
+                }
             });
         }
 
@@ -467,6 +471,135 @@
             container.appendChild(style);
             
             updateSummaryTable(jabatanList);
+        }
+        
+        function renderFullOrgChart() {
+            let nodes = [];
+            const globalRootId = 1;
+            nodes.push({
+                id: globalRootId,
+                pid: null,
+                nama_jabatan: "Kepala Kantor Kementerian Agama Kota Surabaya",
+                b: 1,
+                k: 1,
+                tags: ["struktural"]
+            });
+            
+            let idCounter = 2;
+            let globalJabatanList = [];
+            let jabatanAggGlobal = {};
+            
+            Object.keys(satkers).sort().forEach(satkerName => {
+                const satkerData = satkers[satkerName];
+                const agg = satkerData.jabatanAgg;
+                const jabatanList = Object.values(agg);
+                
+                // Aggregate for global summary
+                jabatanList.forEach(j => {
+                    if(!jabatanAggGlobal[j.nama_jabatan]) {
+                        jabatanAggGlobal[j.nama_jabatan] = {
+                            nama_jabatan: j.nama_jabatan,
+                            jenis: j.jenis,
+                            b: 0,
+                            k: 0
+                        };
+                    }
+                    jabatanAggGlobal[j.nama_jabatan].b += j.b;
+                    jabatanAggGlobal[j.nama_jabatan].k += j.k;
+                });
+                
+                // Find Struktural node for this satker to act as sub-root
+                let subRootId = null;
+                const strukturalNodes = jabatanList.filter(j => j.jenis === "Struktural");
+                
+                if (strukturalNodes.length > 0) {
+                    subRootId = idCounter;
+                    const r = strukturalNodes[0];
+                    nodes.push({
+                        id: subRootId,
+                        pid: globalRootId,
+                        nama_jabatan: r.nama_jabatan + " (" + satkerName + ")",
+                        b: r.b,
+                        k: r.k,
+                        tags: [r.jenis.toLowerCase()]
+                    });
+                    r._processed_full = true;
+                } else {
+                    subRootId = idCounter;
+                    nodes.push({
+                        id: subRootId,
+                        pid: globalRootId,
+                        nama_jabatan: "Kepala " + satkerName,
+                        b: 0,
+                        k: 1,
+                        tags: ["struktural"]
+                    });
+                }
+                
+                idCounter++;
+                
+                // Add other nodes in this satker
+                jabatanList.forEach(j => {
+                    if (j._processed_full) return;
+                    nodes.push({
+                        id: idCounter,
+                        pid: subRootId,
+                        nama_jabatan: j.nama_jabatan,
+                        b: j.b,
+                        k: j.k,
+                        tags: [j.jenis.toLowerCase()]
+                    });
+                    idCounter++;
+                });
+                
+                // Clean up flag
+                jabatanList.forEach(j => delete j._processed_full);
+            });
+            
+            globalJabatanList = Object.values(jabatanAggGlobal);
+            
+            const container = document.getElementById('orgchart');
+            container.innerHTML = '';
+            
+            // Re-apply templates
+            OrgChart.templates.peta = Object.assign({}, OrgChart.templates.ana);
+            OrgChart.templates.peta.size = [250, 120];
+            OrgChart.templates.peta.node = '<rect x="0" y="0" height="{h}" width="{w}" fill="#ffffff" stroke-width="1" stroke="#aeaeae" rx="7" ry="7"></rect>';
+            OrgChart.templates.peta.field_0 = '<text style="font-size: 14px; font-weight: bold;" fill="#ffffff" x="125" y="40" text-anchor="middle" width="230" text-overflow="multiline">{val}</text>';
+            OrgChart.templates.peta.badge_b = '<rect x="30" y="80" width="80" height="25" rx="12" ry="12" fill="#10b981"></rect><text style="font-size: 12px; font-weight: bold;" fill="#ffffff" x="70" y="97" text-anchor="middle">B: {val}</text>';
+            OrgChart.templates.peta.badge_k = '<rect x="140" y="80" width="80" height="25" rx="12" ry="12" fill="#f59e0b"></rect><text style="font-size: 12px; font-weight: bold;" fill="#ffffff" x="180" y="97" text-anchor="middle">K: {val}</text>';
+
+            chart = new OrgChart(container, {
+                nodes: nodes,
+                template: "peta",
+                enableSearch: true,
+                mouseScrool: OrgChart.action.zoom,
+                nodeBinding: {
+                    field_0: "nama_jabatan",
+                    badge_b: "b",
+                    badge_k: "k"
+                },
+                tags: {
+                    "struktural": { template: "peta" },
+                    "fungsional": { template: "peta" },
+                    "pelaksana": { template: "peta" },
+                    "lainnya": { template: "peta" }
+                }
+            });
+            
+            const style = document.createElement('style');
+            style.innerHTML = `
+                [data-tag="struktural"] rect:first-child { fill: #1e3a8a !important; stroke: #1e3a8a !important; }
+                [data-tag="fungsional"] rect:first-child { fill: #0f766e !important; stroke: #0f766e !important; }
+                [data-tag="pelaksana"] rect:first-child { fill: #475569 !important; stroke: #475569 !important; }
+                [data-tag="lainnya"] rect:first-child { fill: #333333 !important; stroke: #333333 !important; }
+                
+                /* Keep text white */
+                [data-tag] text { fill: #ffffff !important; }
+            `;
+            container.appendChild(style);
+            
+            updateSummaryTable(globalJabatanList);
         }
         
         function updateSummaryTable(jabatanList) {

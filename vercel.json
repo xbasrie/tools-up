@@ -1,6 +1,13 @@
 {
   "version": 2,
   "framework": null,
+  "regions": ["sin1"],
+  "functions": {
+    "api/simpeg.js": {
+      "maxDuration": 30,
+      "regions": ["sin1"]
+    }
+  },
   "headers": [
     {
       "source": "/api/(.*)",

@@ -65,8 +65,10 @@ document.addEventListener("DOMContentLoaded", () => {
             item.classList.remove('active');
             
             const href = item.getAttribute('href');
-            // Check if current path matches the href, or if it's the root path matching index.html
-            if (currentPath.endsWith(href) || (currentPath.endsWith('/') && href === 'index.html')) {
+            const cleanHref = href.replace('.html', '');
+            
+            // Check if current path matches the href exactly, or if it matches the clean URL version
+            if (currentPath.endsWith(href) || currentPath.endsWith(cleanHref) || (currentPath.endsWith('/') && href === 'index.html')) {
                 item.classList.add('active');
                 isActiveSet = true;
                 

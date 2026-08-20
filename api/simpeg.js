@@ -15,13 +15,11 @@ module.exports = async (req, res) => {
     let url, cookie;
     try {
         // In Vercel, req.body is already parsed if Content-Type is application/json
-        url = req.body.url;
-        cookie = req.body.cookie;
-    } catch(e) {
-        // Fallback if not parsed
-        const body = JSON.parse(req.body);
+        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
         url = body.url;
         cookie = body.cookie;
+    } catch(e) {
+        return res.status(400).json({ error: 'Request body tidak valid atau bukan JSON' });
     }
 
     if (!url || !cookie) {
@@ -39,13 +37,30 @@ module.exports = async (req, res) => {
                 'Connection': 'keep-alive'
             }
         });
-        
-        res.status(200).json(response.data);
+
+        if (!response.ok) {
+            return res.status(response.status).json({
+                error: `Upstream responded with status ${response.status}`,
+                details: await response.text()
+            });
+        }
+
+        // Parse response as JSON; fallback to raw text if not JSON
+        let data;
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            data = await response.text();
+        }
+
+        return res.status(200).json({ data });
+
     } catch (error) {
         console.error('Proxy Error for URL:', url, error.message);
-        res.status(500).json({ 
+        return res.status(500).json({
             error: 'Gagal mengambil data dari SIMPEG',
-            details: error.response ? error.response.data : error.message
+            details: error.message
         });
     }
 }

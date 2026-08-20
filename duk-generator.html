@@ -117,21 +117,30 @@
                     <input type="file" id="excel-file" accept=".xlsx, .xls" style="display: none;">
                 </div>
 
-                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-                    <button id="btn-process" class="btn-primary glass-btn" style="flex: 1; padding: 1rem;" disabled>
+                <div style="display: flex; gap: 1rem; align-items: center; margin-top: 2rem; flex-wrap: wrap;">
+                    <button id="btn-process" class="btn-primary glass-btn" style="flex: 1; padding: 1rem; min-width: 200px;" disabled>
                         <span class="material-symbols-outlined">sync</span> Mulai Proses DUK
                     </button>
-                    <button id="btn-download" class="btn-primary glass-btn" style="flex: 1; padding: 1rem; display: none; background: #10b981;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary);">
+                        <span class="material-symbols-outlined" style="font-size: 1.2rem;">speed</span>
+                        <label for="worker-count" style="white-space: nowrap; font-size: 0.9rem;">Workers:</label>
+                        <input type="number" id="worker-count" value="5" min="1" max="15" 
+                            style="width: 60px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; padding: 0.5rem; text-align: center;">
+                    </div>
+                    <button id="btn-download" class="btn-primary glass-btn" style="flex: 1; padding: 1rem; min-width: 200px; display: none; background: linear-gradient(135deg, #059669, #10b981);">
                         <span class="material-symbols-outlined">download</span> Unduh Excel DUK
                     </button>
                 </div>
                 
                 <div class="progress-container" id="progress-container">
-                    <div style="display: flex; justify-content: space-between;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span id="progress-text">Memproses 0 dari 0 NIP...</span>
-                        <span id="progress-percentage">0%</span>
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <span id="progress-speed" style="color: var(--accent); font-size: 0.85rem;"></span>
+                            <span id="progress-percentage" style="font-weight: 700;">0%</span>
+                        </div>
                     </div>
-                    <div class="progress-bar">
+                    <div class="progress-bar" style="margin: 0.5rem 0;">
                         <div class="progress-fill" id="progress-fill"></div>
                     </div>
                     <div class="log-container" id="log-container"></div>
@@ -148,7 +157,6 @@
         let inputNIPs = [];
         let outputData = [];
         
-        // Setup Drag & Drop
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('excel-file');
         const uploadText = document.getElementById('upload-text');
@@ -161,179 +169,200 @@
         
         function handleFile(file) {
             uploadText.innerHTML = `File terpilih:<br><span style="color:white; font-size: 1.1rem;">${file.name}</span>`;
-            
             const reader = new FileReader();
             reader.onload = function(e) {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, {type: 'array'});
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                
-                // Get range
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                 const range = XLSX.utils.decode_range(worksheet['!ref']);
                 inputNIPs = [];
-                
-                // Start from B6 (Row index 5, Col index 1)
                 for (let R = 5; R <= range.e.r; ++R) {
-                    const cellRef = XLSX.utils.encode_cell({c: 1, r: R}); // Column B is 1
-                    const cell = worksheet[cellRef];
+                    const cell = worksheet[XLSX.utils.encode_cell({c: 1, r: R})];
                     if (cell && cell.v) {
                         let nip = cell.v.toString().trim().replace(/[^0-9]/g, '');
-                        if (nip.length >= 18) {
-                            inputNIPs.push(nip);
-                        }
+                        if (nip.length >= 18) inputNIPs.push(nip);
                     }
                 }
-                
                 logMessage(`Berhasil memuat file. Ditemukan ${inputNIPs.length} NIP valid.`, 'success');
                 if (inputNIPs.length > 0) btnProcess.disabled = false;
             };
             reader.readAsArrayBuffer(file);
         }
         
-        // --- Klasifikasi Jabatan Logic (Copied from Peta Jabatan) ---
         function getJenisJabatan(jabatanLengkap) {
-            let text = jabatanLengkap.replace(/\s+/g, ' ').trim();
+            let text = (jabatanLengkap || '').replace(/\s+/g, ' ').trim();
             const parenMatch = text.match(/^(.*?)\((.*?)\)$/);
-            let jabatanUtama = text;
-            
-            if (parenMatch) {
-                jabatanUtama = parenMatch[1].trim();
-            } else {
+            let jabatanUtama = parenMatch ? parenMatch[1].trim() : text;
+            if (!parenMatch) {
                 const delimiterMatch = text.match(/(.*?)(?:\spada\s|\sdi\s)(.+)/i);
                 if (delimiterMatch) jabatanUtama = delimiterMatch[1].trim();
-                else {
-                    const satkerKeywords = /\b(Kelompok Jabatan Fungsional.*|Kantor Kementerian Agama.*|MAN\s*\d*.*|MIN\s*\d+.*|MTsN\s*\d+.*|KUA\s+.*|Seksi\s+.*|Sub Bagian\s+.*|Urusan Tata Usaha.*|Penyelenggara\s+.*)/i;
-                    const kwMatch = text.match(satkerKeywords);
-                    if (kwMatch) jabatanUtama = text.replace(kwMatch[0], "").trim();
-                }
             }
-            
             let j = jabatanUtama.toLowerCase();
             if (/kepala|kasubbag|kasi|penyelenggara|kaur/.test(j)) return "Struktural";
             if (/guru|pengawas|penyuluh|penghulu|ahli|terampil|mahir|penyelia|pranata|analis|auditor|pengembang|widyaiswara|pustakawan|arsiparis/.test(j)) return "Fungsional";
             return "Pelaksana";
         }
         
-        // --- API & Processing ---
         const logContainer = document.getElementById('log-container');
+        let doneCount = 0;
+        let totalCount = 0;
+        let startTime = 0;
+
         function logMessage(msg, type = '') {
             document.getElementById('progress-container').style.display = 'block';
             const div = document.createElement('div');
             div.className = `log-entry ${type}`;
-            const time = new Date().toLocaleTimeString();
-            div.textContent = `[${time}] ${msg}`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
             logContainer.appendChild(div);
             logContainer.scrollTop = logContainer.scrollHeight;
+            while (logContainer.children.length > 300) logContainer.removeChild(logContainer.firstChild);
+        }
+
+        function updateProgress() {
+            const pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+            document.getElementById('progress-fill').style.width = `${pct}%`;
+            document.getElementById('progress-percentage').textContent = `${pct}%`;
+            document.getElementById('progress-text').textContent = `Selesai ${doneCount} dari ${totalCount} NIP`;
+
+            const elapsed = (Date.now() - startTime) / 1000;
+            if (elapsed > 0 && doneCount > 0) {
+                const speed = (doneCount / elapsed).toFixed(1);
+                const remaining = totalCount - doneCount;
+                const eta = remaining > 0 ? Math.ceil(remaining / (doneCount / elapsed)) : 0;
+                document.getElementById('progress-speed').textContent =
+                    `${speed} NIP/s · ETA ${eta}s`;
+            }
         }
         
         async function fetchSIMPEG(url, cookie) {
-            try {
-                const res = await fetch('/api/simpeg', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, cookie })
+            const res = await fetch('/api/simpeg', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url, cookie })
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || `HTTP ${res.status}`);
+            }
+            return await res.json();
+        }
+
+        function createPool(concurrency) {
+            let active = 0;
+            const queue = [];
+            return function schedule(task) {
+                return new Promise((resolve, reject) => {
+                    const run = async () => {
+                        active++;
+                        try { resolve(await task()); }
+                        catch (e) { reject(e); }
+                        finally {
+                            active--;
+                            if (queue.length > 0) queue.shift()();
+                        }
+                    };
+                    if (active < concurrency) run();
+                    else queue.push(run);
                 });
-                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-                return await res.json();
-            } catch (error) {
-                console.error("Fetch error:", error);
+            };
+        }
+
+        async function processNIP(nip, cookie, index) {
+            try {
+                const pDataRes = await fetchSIMPEG(
+                    `https://simpeg5.kemenag.go.id/get_data_pegawai?NIP_BARU=${nip}`, cookie
+                );
+                if (!pDataRes || pDataRes.length === 0) {
+                    logMessage(`⚠️ [${index}] NIP ${nip} tidak ditemukan.`, 'error');
+                    return null;
+                }
+                const peg = pDataRes[0];
+
+                const pktRes = await fetchSIMPEG(
+                    `https://simpeg5.kemenag.go.id/get_pangkat?NIP_LAMA=${peg.NIP}`, cookie
+                );
+
+                let mkTahun = 0, mkBulan = 0;
+                let kpGol = peg.GOL_RUANG, kpTmt = peg.TMT_SK_GOL || "";
+                if (pktRes && pktRes.length > 0) {
+                    const skCpns = pktRes.find(p => p.REF_DESC1 === "SK CPNS");
+                    if (skCpns) { mkTahun = skCpns.MK_TAHUN || 0; mkBulan = skCpns.MK_BULAN || 0; }
+                    pktRes.sort((a, b) => b.NO_URUT - a.NO_URUT);
+                    kpGol = pktRes[0].GOL_RUANG;
+                    kpTmt = pktRes[0].TMT_SK;
+                }
+
+                const jenis = (nip.substring(12, 15) === "211" || nip.substring(12, 15) === "212") ? "PPPK" : "PNS";
+                logMessage(`✅ [${index}] ${peg.NAMA_LENGKAP}`, 'success');
+
+                return {
+                    _idx: index,
+                    "NIP BARU":      peg.NIP_BARU_VIEW || nip,
+                    "NIP LAMA":      peg.NIP_VIEW || "",
+                    "NAMA":          peg.NAMA_LENGKAP || "",
+                    "STATUS":        jenis,
+                    "TMT CPNS":      peg.MASUK_PEGAWAI || "",
+                    "GOLONGAN":      peg.GOL_RUANG || "",
+                    "MK TAHUN":      mkTahun,
+                    "MK BULAN":      mkBulan,
+                    "TMT PNS":       peg.tmt_pns || "",
+                    "KP - GOL":      kpGol,
+                    "KP - TMT":      kpTmt,
+                    "TEMPAT TUGAS":  peg.UNIT_KERJA || "",
+                    "JABATAN":       getJenisJabatan(peg.KET_JABATAN || ""),
+                    "PENSIUN":       peg.TMT_PENSIUN || ""
+                };
+            } catch (e) {
+                logMessage(`❌ [${index}] NIP ${nip}: ${e.message}`, 'error');
                 return null;
+            } finally {
+                doneCount++;
+                updateProgress();
             }
         }
-        
+
         btnProcess.addEventListener('click', async () => {
             const cookie = document.getElementById('cookie-input').value.trim();
-            if (!cookie) {
-                alert("Harap masukkan Cookie SIMPEG!");
-                return;
-            }
-            
+            if (!cookie) { alert("Harap masukkan Cookie SIMPEG!"); return; }
+
+            const CONCURRENCY = Math.max(1, Math.min(15, parseInt(document.getElementById('worker-count').value) || 5));
+
             btnProcess.disabled = true;
-            btnProcess.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">sync</span> Memproses...';
+            btnProcess.innerHTML = `<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">sync</span> ${CONCURRENCY} Workers Aktif...`;
             outputData = [];
-            
-            for (let i = 0; i < inputNIPs.length; i++) {
-                const nip = inputNIPs[i];
-                logMessage(`Memproses NIP: ${nip} (${i+1}/${inputNIPs.length})...`);
-                
-                // Update Progress
-                const pct = Math.round(((i) / inputNIPs.length) * 100);
-                document.getElementById('progress-fill').style.width = `${pct}%`;
-                document.getElementById('progress-percentage').textContent = `${pct}%`;
-                document.getElementById('progress-text').textContent = `Memproses NIP ${i+1} dari ${inputNIPs.length}`;
-                
-                try {
-                    // 1. Get Data Pegawai
-                    const pDataRes = await fetchSIMPEG(`https://simpeg5.kemenag.go.id/get_data_pegawai?NIP_BARU=${nip}`, cookie);
-                    if (!pDataRes || pDataRes.length === 0) {
-                        logMessage(`⚠️ NIP ${nip} tidak ditemukan di SIMPEG.`, 'error');
-                        continue;
-                    }
-                    const peg = pDataRes[0];
-                    const nipLamaEnc = peg.NIP;
-                    
-                    // 2. Get Pangkat History
-                    const pktRes = await fetchSIMPEG(`https://simpeg5.kemenag.go.id/get_pangkat?NIP_LAMA=${nipLamaEnc}`, cookie);
-                    let mkTahun = 0, mkBulan = 0;
-                    let kpGol = peg.GOL_RUANG, kpTmt = peg.TMT_SK_GOL || ""; // Fallback
-                    
-                    if (pktRes && pktRes.length > 0) {
-                        // MK CPNS
-                        const skCpns = pktRes.find(p => p.REF_DESC1 === "SK CPNS");
-                        if (skCpns) {
-                            mkTahun = skCpns.MK_TAHUN || 0;
-                            mkBulan = skCpns.MK_BULAN || 0;
-                        }
-                        
-                        // KP Terakhir (Highest NO_URUT)
-                        pktRes.sort((a,b) => b.NO_URUT - a.NO_URUT);
-                        kpGol = pktRes[0].GOL_RUANG;
-                        kpTmt = pktRes[0].TMT_SK;
-                    }
-                    
-                    // Status PNS/PPPK
-                    const jenis = (nip.substring(12, 15) === "211" || nip.substring(12, 15) === "212") ? "PPPK" : "PNS";
-                    
-                    // Jabatan Class
-                    const jabatanText = peg.KET_JABATAN || "";
-                    const jabatanClass = getJenisJabatan(jabatanText);
-                    
-                    // Compile Row
-                    outputData.push({
-                        "NO": outputData.length + 1,
-                        "NIP BARU": peg.NIP_BARU_VIEW || nip,
-                        "NIP LAMA": peg.NIP_VIEW || "",
-                        "NAMA": peg.NAMA_LENGKAP || "",
-                        "STATUS": jenis,
-                        "TMT CPNS": peg.MASUK_PEGAWAI || "",
-                        "GOLONGAN": peg.GOL_RUANG || "",
-                        "MK TAHUN": mkTahun,
-                        "MK BULAN": mkBulan,
-                        "TMT PNS": peg.tmt_pns || "",
-                        "KP - GOL": kpGol,
-                        "KP - TMT": kpTmt,
-                        "TEMPAT TUGAS": peg.UNIT_KERJA || "",
-                        "JABATAN": jabatanClass,
-                        "PENSIUN": peg.TMT_PENSIUN || ""
-                    });
-                    
-                    logMessage(`✅ Sukses: ${peg.NAMA_LENGKAP}`, 'success');
-                } catch (e) {
-                    logMessage(`❌ Gagal memproses NIP ${nip}: ${e.message}`, 'error');
-                }
-            }
-            
-            // Finish
-            document.getElementById('progress-fill').style.width = `100%`;
-            document.getElementById('progress-percentage').textContent = `100%`;
-            document.getElementById('progress-text').textContent = `Selesai memproses ${inputNIPs.length} NIP.`;
-            logMessage(`🎉 Proses Selesai! Klik Unduh Excel untuk menyimpan.`, 'success');
-            
+            doneCount = 0;
+            totalCount = inputNIPs.length;
+            startTime = Date.now();
+            logContainer.innerHTML = '';
+
+            updateProgress();
+            logMessage(`🚀 Memulai ${totalCount} NIP dengan ${CONCURRENCY} workers paralel...`);
+
+            const runInPool = createPool(CONCURRENCY);
+
+            const results = await Promise.all(
+                inputNIPs.map((nip, i) => runInPool(() => processNIP(nip, cookie, i + 1)))
+            );
+
+            outputData = results
+                .filter(r => r !== null)
+                .sort((a, b) => a._idx - b._idx)
+                .map((row, idx) => {
+                    const { _idx, ...rest } = row;
+                    return { "NO": idx + 1, ...rest };
+                });
+
+            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+            document.getElementById('progress-fill').style.width = '100%';
+            document.getElementById('progress-percentage').textContent = '100%';
+            document.getElementById('progress-text').textContent = `Selesai ${totalCount} NIP dalam ${elapsed} detik`;
+            document.getElementById('progress-speed').textContent = '';
+            logMessage(`🎉 Proses selesai! ${outputData.length} sukses, ${totalCount - outputData.length} gagal. Total waktu: ${elapsed}s`, 'success');
+
             btnProcess.style.display = 'none';
             document.getElementById('btn-download').style.display = 'flex';
         });
-        
+
         document.getElementById('btn-download').addEventListener('click', () => {
             if (outputData.length === 0) return;
             const ws = XLSX.utils.json_to_sheet(outputData);

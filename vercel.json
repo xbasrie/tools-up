@@ -1,22 +1,6 @@
 {
   "version": 2,
   "framework": null,
-  "builds": [
-    {
-      "src": "api/simpeg.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/simpeg",
-      "dest": "/api/simpeg.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
-  ],
   "headers": [
     {
       "source": "/api/(.*)",

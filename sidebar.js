@@ -24,6 +24,10 @@ document.addEventListener("DOMContentLoaded", () => {
             <span class="material-symbols-outlined icon">account_tree</span>
             <span class="text">Peta Jabatan</span>
         </a>
+        <a href="bulk-srikandi.html" class="menu-item">
+            <span class="material-symbols-outlined icon">send</span>
+            <span class="text">Bulk Srikandi Sender</span>
+        </a>
         <div class="menu-group">
             <div class="menu-item parent-menu" onclick="this.parentElement.classList.toggle('open')">
                 <div style="display: flex; align-items: center; gap: 1.2rem;">

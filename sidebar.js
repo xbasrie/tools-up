@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <span class="material-symbols-outlined icon">event_note</span>
             <span class="text">Kalkulator Tanggal</span>
         </a>
-        <a href="duk-generator.html" class="menu-item">
+        <a href="duk-generator.html" class="menu-item" style="display: none;">
             <span class="material-symbols-outlined icon">receipt_long</span>
             <span class="text">DUK Generator</span>
         </a>

@@ -507,50 +507,18 @@
                                 logMsg(`Mendownload file untuk [${folderName}] dari kolom [${linkCol}]...`);
                                 
                                 const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-                                // Daftar proxy untuk mengatasi pemblokiran CORS/Google
-                                const proxies = [
-                                    "https://corsproxy.io/?",
-                                    "https://api.allorigins.win/raw?url=",
-                                    "https://api.codetabs.com/v1/proxy?quest="
-                                ];
+                                // Menggunakan proxy untuk menghindari CORS
+                                const response = await fetch(corsProxy + encodeURIComponent(downloadUrl));
                                 
-                                let response = null;
-                                let successProxy = false;
-                                let lastErrorStatus = null;
-                                
-                                for (const proxy of proxies) {
-                                    try {
-                                        response = await fetch(proxy + encodeURIComponent(downloadUrl));
-                                        if (response.ok) {
-                                            successProxy = true;
-                                            break;
-                                        }
-                                        lastErrorStatus = response.status;
-                                    } catch (e) {
-                                        // Ignore and try next proxy
-                                    }
-                                }
-                                
-                                if (!successProxy) {
-                                    if (lastErrorStatus === 403) {
-                                        throw new Error(`HTTP Error 403 (Akses Ditolak). Pastikan file GDrive berstatus "Anyone with the link" dan ukurannya tidak terlalu besar (bebas limit scan virus).`);
-                                    }
-                                    throw new Error(`HTTP Error ${lastErrorStatus || 'Unknown'}. Gagal melewati CORS Proxy.`);
+                                if (!response.ok) {
+                                    throw new Error(`HTTP Error ${response.status}`);
                                 }
                                 
                                 const blob = await response.blob();
                                 
-                                // Deteksi HTML (Biasanya halaman peringatan scan virus Google Drive)
-                                if (blob.type && blob.type.includes('text/html')) {
-                                    const text = await blob.text();
-                                    if (text.includes('virus-scan') || text.includes('Google Drive')) {
-                                        throw new Error('Google Drive memblokir unduhan otomatis karena file terlalu besar (Butuh konfirmasi scan virus).');
-                                    }
-                                }
-                                
                                 // Coba dapatkan nama file dari headers, jika tidak ada, gunakan nama kolom
                                 let fileName = `${linkCol}.pdf`; // Fallback ext default
-                                const disposition = response.headers ? response.headers.get('content-disposition') : null;
+                                const disposition = response.headers.get('content-disposition');
                                 if (disposition && disposition.indexOf('filename=') !== -1) {
                                     const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
                                     const matches = filenameRegex.exec(disposition);
@@ -562,7 +530,6 @@
                                     if(blob.type.includes('image/jpeg')) fileName = `${linkCol}.jpg`;
                                     else if(blob.type.includes('image/png')) fileName = `${linkCol}.png`;
                                     else if(blob.type.includes('application/pdf')) fileName = `${linkCol}.pdf`;
-                                    else if(blob.type.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document')) fileName = `${linkCol}.docx`;
                                     else fileName = `${linkCol}_file`;
                                 }
                                 

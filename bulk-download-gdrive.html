@@ -271,8 +271,9 @@
                         <strong>Petunjuk Penggunaan:</strong>
                         <ul style="margin-top: 0.5rem; padding-left: 1.2rem; margin-bottom: 0;">
                             <li>Pastikan Google Sheet Anda memiliki akses <strong>"Anyone with the link" (Siapa saja yang memiliki link)</strong>.</li>
-                            <li>Pastikan file-file di dalam Google Drive juga memiliki akses <strong>"Anyone with the link"</strong> agar dapat didownload.</li>
-                            <li>Sistem akan mendownload semua file dan mengumpulkannya ke dalam <strong>satu file ZIP</strong>.</li>
+                            <li>Pastikan file-file di dalam Google Drive juga memiliki akses <strong>"Anyone with the link"</strong>.</li>
+                            <li><strong style="color: #ef4444;">WAJIB:</strong> Anda harus menginstal dan menyalakan ekstensi <strong><a href="https://chrome.google.com/webstore/detail/allow-cors-access-control/dpacanjfikmhoddligfbehkpomnbgblf" target="_blank" style="color: #2563eb; text-decoration: underline;">Allow CORS</a></strong> di browser Anda agar file bisa didownload secara massal.</li>
+                            <li>Sistem akan mendownload semua file langsung dari Google Drive Anda ke dalam <strong>satu file ZIP</strong>.</li>
                         </ul>
                     </div>
                 </div>
@@ -341,10 +342,6 @@
     <script>
         let sheetData = [];
         let headers = [];
-        
-        // Proxy URL to bypass CORS for client-side JS downloading.
-        // using corsproxy.io
-        const corsProxy = "https://corsproxy.io/?"; 
 
         function logMsg(msg, type = 'normal') {
             const logContainer = document.getElementById('log-output');
@@ -507,10 +504,14 @@
                                 logMsg(`Mendownload file untuk [${folderName}] dari kolom [${linkCol}]...`);
                                 
                                 const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-                                // Menggunakan proxy untuk menghindari CORS
-                                const response = await fetch(corsProxy + encodeURIComponent(downloadUrl));
+                                
+                                // Fetch langsung tanpa proxy (Mewajibkan ekstensi Allow CORS)
+                                const response = await fetch(downloadUrl);
                                 
                                 if (!response.ok) {
+                                    if (response.status === 403) {
+                                        throw new Error(`HTTP 403 Akses Ditolak. Pastikan file GDrive "Open Access" dan ekstensi Allow CORS sudah dinyalakan.`);
+                                    }
                                     throw new Error(`HTTP Error ${response.status}`);
                                 }
                                 

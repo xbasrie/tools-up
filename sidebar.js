@@ -28,6 +28,10 @@ document.addEventListener("DOMContentLoaded", () => {
             <span class="material-symbols-outlined icon">send</span>
             <span class="text">Bulk Srikandi Sender</span>
         </a>
+        <a href="bulk-download-gdrive.html" class="menu-item">
+            <span class="material-symbols-outlined icon">cloud_download</span>
+            <span class="text">Bulk Download GDrive</span>
+        </a>
         <div class="menu-group">
             <div class="menu-item parent-menu" onclick="this.parentElement.classList.toggle('open')">
                 <div style="display: flex; align-items: center; gap: 1.2rem;">

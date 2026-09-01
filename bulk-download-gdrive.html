@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tools Kepegawaian - Bulk Download GDrive</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    
+    <style>
+        .tool-card {
+            background: var(--surface);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+            margin-bottom: 2rem;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        .btn-primary:disabled {
+            background: var(--border);
+            cursor: not-allowed;
+            color: var(--text-secondary);
+        }
+        .alert-info {
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 4px solid #3b82f6;
+            padding: 1rem;
+            border-radius: 4px 8px 8px 4px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1rem;
+        }
+        .alert-info .icon {
+            color: #3b82f6;
+        }
+        
+        .columns-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+        
+        .column-box {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        
+        .column-box h3 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .progress-container {
+            margin-top: 1.5rem;
+            display: none;
+        }
+        
+        .progress-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+        
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .log-container {
+            margin-top: 1rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: monospace;
+            font-size: 0.85rem;
+            height: 200px;
+            overflow-y: auto;
+            color: var(--text-secondary);
+        }
+        .log-item {
+            margin-bottom: 0.25rem;
+            border-bottom: 1px dashed var(--border);
+            padding-bottom: 0.25rem;
+        }
+        .log-error {
+            color: #ef4444;
+        }
+        .log-success {
+            color: #10b981;
+        }
+        
+        @media (max-width: 768px) {
+            .columns-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <div id="sidebar-container"></div>
+
+        <!-- Main Content -->
+        <main class="main-panel glass-panel" style="padding: 2rem;">
+            <header class="top-bar" style="margin-bottom: 1.5rem; padding-bottom: 1rem;">
+                <div class="page-title">
+                    <h1>Bulk Download GDrive</h1>
+                    <p class="subtitle">Download dan kelompokkan file Google Drive dari link di Google Sheet</p>
+                </div>
+            </header>
+            
+            <section class="content-area">
+                
+                <div class="alert-info">
+                    <span class="material-symbols-outlined icon">info</span>
+                    <div>
+                        <strong>Petunjuk Penggunaan:</strong>
+                        <ul style="margin-top: 0.5rem; padding-left: 1.2rem; margin-bottom: 0;">
+                            <li>Pastikan Google Sheet Anda memiliki akses <strong>"Anyone with the link" (Siapa saja yang memiliki link)</strong>.</li>
+                            <li>Pastikan file-file di dalam Google Drive juga memiliki akses <strong>"Anyone with the link"</strong> agar dapat didownload.</li>
+                            <li>Sistem akan mendownload semua file dan mengumpulkannya ke dalam <strong>satu file ZIP</strong>.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="tool-card">
+                    <div class="form-group">
+                        <label for="sheet-url">Link Google Sheet</label>
+                        <input type="text" id="sheet-url" class="form-control" placeholder="https://docs.google.com/spreadsheets/d/14gj_TmjM2EfPo.../edit">
+                    </div>
+                    
+                    <button id="btn-read" class="btn btn-primary" onclick="readHeaders()">
+                        <span class="material-symbols-outlined">table_chart</span>
+                        Baca Header
+                    </button>
+                    
+                    <div id="setup-section" style="display: none;">
+                        <div class="columns-container">
+                            <div class="column-box">
+                                <h3><span class="material-symbols-outlined" style="font-size: 1.2rem;">folder</span> Penamaan Folder</h3>
+                                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                                    Pilih kolom yang akan digabungkan menjadi nama folder. (Misal: Pilih kolom "NIP" & "Nama")
+                                </p>
+                                <div id="folder-cols" class="checkbox-group">
+                                    <!-- Dinamis -->
+                                </div>
+                            </div>
+                            
+                            <div class="column-box">
+                                <h3><span class="material-symbols-outlined" style="font-size: 1.2rem;">link</span> Kolom Link GDrive</h3>
+                                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                                    Pilih kolom mana saja yang berisi link file Google Drive untuk didownload.
+                                </p>
+                                <div id="link-cols" class="checkbox-group">
+                                    <!-- Dinamis -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 2rem;">
+                            <button id="btn-download" class="btn btn-primary" style="background: #10b981; width: 100%; justify-content: center;" onclick="startDownload()">
+                                <span class="material-symbols-outlined">archive</span>
+                                Mulai Download (ZIP)
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="progress-section" class="progress-container">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-weight: 500;">
+                            <span id="progress-text">Memproses 0 / 0 Baris</span>
+                            <span id="progress-percent">0%</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div id="progress-bar" class="progress-bar-fill"></div>
+                        </div>
+                        
+                        <div id="log-output" class="log-container">
+                            <div class="log-item">Sistem siap...</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <script src="sidebar.js"></script>
+    <script>
+        let sheetData = [];
+        let headers = [];
+        
+        // Proxy URL to bypass CORS for client-side JS downloading.
+        // using corsproxy.io
+        const corsProxy = "https://corsproxy.io/?"; 
+
+        function logMsg(msg, type = 'normal') {
+            const logContainer = document.getElementById('log-output');
+            const div = document.createElement('div');
+            div.className = `log-item ${type === 'error' ? 'log-error' : (type === 'success' ? 'log-success' : '')}`;
+            
+            const time = new Date().toLocaleTimeString();
+            div.innerHTML = `[${time}] ${msg}`;
+            
+            logContainer.appendChild(div);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function extractSheetId(url) {
+            const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+            return match ? match[1] : null;
+        }
+        
+        function extractDriveFileId(url) {
+            if (!url) return null;
+            // Matches /d/ID/view or ?id=ID
+            let match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+            if (!match) {
+                match = url.match(/id=([a-zA-Z0-9-_]+)/);
+            }
+            return match ? match[1] : null;
+        }
+
+        async function readHeaders() {
+            const urlInput = document.getElementById('sheet-url').value;
+            const sheetId = extractSheetId(urlInput);
+            
+            if (!sheetId) {
+                alert("URL Google Sheet tidak valid. Pastikan format link benar.");
+                return;
+            }
+            
+            const btn = document.getElementById('btn-read');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 2s linear infinite;">sync</span> Membaca...';
+            btn.disabled = true;
+            
+            const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+            
+            Papa.parse(csvUrl, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    
+                    if (results.errors && results.errors.length > 0 && results.data.length === 0) {
+                        alert("Gagal membaca Sheet. Pastikan akses Sheet adalah 'Anyone with the link'.");
+                        return;
+                    }
+                    
+                    sheetData = results.data;
+                    headers = results.meta.fields;
+                    
+                    if (!headers || headers.length === 0) {
+                        alert("Tidak ada data header yang ditemukan.");
+                        return;
+                    }
+                    
+                    renderCheckboxes();
+                    document.getElementById('setup-section').style.display = 'block';
+                    document.getElementById('progress-section').style.display = 'none';
+                    document.getElementById('log-output').innerHTML = '<div class="log-item">Header berhasil dimuat. Silakan pilih konfigurasi.</div>';
+                },
+                error: function(err) {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    alert("Error saat mengambil data CSV: " + err.message);
+                }
+            });
+        }
+        
+        function renderCheckboxes() {
+            const folderContainer = document.getElementById('folder-cols');
+            const linkContainer = document.getElementById('link-cols');
+            
+            folderContainer.innerHTML = '';
+            linkContainer.innerHTML = '';
+            
+            headers.forEach(header => {
+                if(!header.trim()) return;
+                
+                // Folder Checkbox
+                const fDiv = document.createElement('label');
+                fDiv.className = 'checkbox-item';
+                fDiv.innerHTML = `<input type="checkbox" value="${header}" class="folder-chk"> ${header}`;
+                folderContainer.appendChild(fDiv);
+                
+                // Link Checkbox
+                const lDiv = document.createElement('label');
+                lDiv.className = 'checkbox-item';
+                lDiv.innerHTML = `<input type="checkbox" value="${header}" class="link-chk"> ${header}`;
+                linkContainer.appendChild(lDiv);
+            });
+        }
+        
+        async function startDownload() {
+            // Get selected cols
+            const folderCols = Array.from(document.querySelectorAll('.folder-chk:checked')).map(cb => cb.value);
+            const linkCols = Array.from(document.querySelectorAll('.link-chk:checked')).map(cb => cb.value);
+            
+            if (folderCols.length === 0) {
+                alert("Pilih minimal satu kolom untuk penamaan folder.");
+                return;
+            }
+            
+            if (linkCols.length === 0) {
+                alert("Pilih minimal satu kolom yang berisi link GDrive.");
+                return;
+            }
+            
+            document.getElementById('progress-section').style.display = 'block';
+            document.getElementById('log-output').innerHTML = '';
+            
+            const btn = document.getElementById('btn-download');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 2s linear infinite;">sync</span> Memproses...';
+            
+            const zip = new JSZip();
+            let totalRows = sheetData.length;
+            let processedRows = 0;
+            let successFiles = 0;
+            
+            logMsg(`Memulai pemrosesan untuk ${totalRows} baris...`);
+            
+            for (let i = 0; i < sheetData.length; i++) {
+                const row = sheetData[i];
+                processedRows++;
+                
+                // Update Progress UI
+                const percent = Math.round((processedRows / totalRows) * 100);
+                document.getElementById('progress-text').innerText = `Memproses Baris ${processedRows} / ${totalRows}`;
+                document.getElementById('progress-percent').innerText = `${percent}%`;
+                document.getElementById('progress-bar').style.width = `${percent}%`;
+                
+                // Buat Nama Folder
+                let folderNameParts = [];
+                for (const col of folderCols) {
+                    if (row[col]) folderNameParts.push(row[col].trim());
+                }
+                let folderName = folderNameParts.join(' - ').replace(/[/\\?%*:|"<>]/g, '-'); // Sanitize
+                
+                if (!folderName) {
+                    folderName = `Baris_${i+1}`;
+                }
+                
+                // Proses setiap link
+                for (const linkCol of linkCols) {
+                    const cellValue = row[linkCol];
+                    if (cellValue && cellValue.includes('drive.google.com')) {
+                        const fileId = extractDriveFileId(cellValue);
+                        if (fileId) {
+                            try {
+                                logMsg(`Mendownload file untuk [${folderName}] dari kolom [${linkCol}]...`);
+                                
+                                const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+                                // Menggunakan proxy untuk menghindari CORS
+                                const response = await fetch(corsProxy + encodeURIComponent(downloadUrl));
+                                
+                                if (!response.ok) {
+                                    throw new Error(`HTTP Error ${response.status}`);
+                                }
+                                
+                                const blob = await response.blob();
+                                
+                                // Coba dapatkan nama file dari headers, jika tidak ada, gunakan nama kolom
+                                let fileName = `${linkCol}.pdf`; // Fallback ext default
+                                const disposition = response.headers.get('content-disposition');
+                                if (disposition && disposition.indexOf('filename=') !== -1) {
+                                    const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                                    const matches = filenameRegex.exec(disposition);
+                                    if (matches != null && matches[1]) { 
+                                        fileName = matches[1].replace(/['"]/g, '');
+                                    }
+                                } else {
+                                    // if it's an image
+                                    if(blob.type.includes('image/jpeg')) fileName = `${linkCol}.jpg`;
+                                    else if(blob.type.includes('image/png')) fileName = `${linkCol}.png`;
+                                    else if(blob.type.includes('application/pdf')) fileName = `${linkCol}.pdf`;
+                                    else fileName = `${linkCol}_file`;
+                                }
+                                
+                                // Simpan ke ZIP
+                                zip.folder(folderName).file(fileName, blob);
+                                successFiles++;
+                                logMsg(`Berhasil menambahkan ${fileName} ke folder ${folderName}`, 'success');
+                                
+                            } catch (err) {
+                                logMsg(`Gagal mendownload dari kolom [${linkCol}] pada baris ke-${i+1}: ${err.message}`, 'error');
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (successFiles > 0) {
+                logMsg(`Semua baris diproses. Sedang membuat file ZIP (${successFiles} file)...`, "success");
+                try {
+                    const content = await zip.generateAsync({type:"blob"});
+                    saveAs(content, "Hasil_Download_GDrive.zip");
+                    logMsg("File ZIP berhasil dibuat dan didownload!", "success");
+                } catch (err) {
+                    logMsg(`Gagal membuat ZIP: ${err.message}`, 'error');
+                }
+            } else {
+                logMsg("Tidak ada file valid yang berhasil didownload.", "error");
+            }
+            
+            btn.disabled = false;
+            btn.innerHTML = '<span class="material-symbols-outlined">archive</span> Mulai Download (ZIP)';
+        }
+    </script>
+</body>
+</html>

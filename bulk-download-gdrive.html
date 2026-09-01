@@ -341,6 +341,7 @@
     <script>
         let sheetData = [];
         let headers = [];
+        let currentSheetTitle = "Hasil_Download_GDrive"; // Default name
 
         function logMsg(msg, type = 'normal') {
             const logContainer = document.getElementById('log-output');
@@ -384,6 +385,17 @@
             btn.disabled = true;
             
             const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+            
+            // Ambil judul sheet dari API internal (secara asinkron di latar belakang)
+            fetch(`/api/get-sheet-title?id=${sheetId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.title) {
+                        currentSheetTitle = data.title.replace(/[/\\?%*:|"<>]/g, '-');
+                        logMsg(`Judul Dokumen Terdeteksi: ${currentSheetTitle}`);
+                    }
+                })
+                .catch(err => console.log("Gagal mengambil judul", err));
             
             Papa.parse(csvUrl, {
                 download: true,
@@ -549,8 +561,8 @@
                 logMsg(`Semua baris diproses. Sedang membuat file ZIP (${successFiles} file)...`, "success");
                 try {
                     const content = await zip.generateAsync({type:"blob"});
-                    saveAs(content, "Hasil_Download_GDrive.zip");
-                    logMsg("File ZIP berhasil dibuat dan didownload!", "success");
+                    saveAs(content, `${currentSheetTitle}.zip`);
+                    logMsg(`File ZIP berhasil dibuat: ${currentSheetTitle}.zip`, "success");
                 } catch (err) {
                     logMsg(`Gagal membuat ZIP: ${err.message}`, 'error');
                 }

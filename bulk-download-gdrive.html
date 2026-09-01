@@ -272,13 +272,31 @@
                         <ul style="margin-top: 0.5rem; padding-left: 1.2rem; margin-bottom: 0;">
                             <li>Pastikan Google Sheet Anda memiliki akses <strong>"Anyone with the link" (Siapa saja yang memiliki link)</strong>.</li>
                             <li>Pastikan file-file di dalam Google Drive juga memiliki akses <strong>"Anyone with the link"</strong>.</li>
-                            <li><strong style="color: #ef4444;">WAJIB:</strong> Anda harus menginstal dan menyalakan ekstensi <strong><a href="https://chrome.google.com/webstore/detail/allow-cors-access-control/dpacanjfikmhoddligfbehkpomnbgblf" target="_blank" style="color: #2563eb; text-decoration: underline;">Allow CORS</a></strong> di browser Anda agar file bisa didownload secara massal.</li>
-                            <li>Sistem akan mendownload semua file langsung dari Google Drive Anda ke dalam <strong>satu file ZIP</strong>.</li>
+                            <li>Jika mode <strong>ZIP</strong> terus-menerus gagal (karena diblokir Google), silakan gunakan mode <strong>Download Langsung</strong>.</li>
                         </ul>
                     </div>
                 </div>
 
                 <div class="tool-card">
+                    <div class="form-group" style="margin-bottom: 2rem;">
+                        <label style="font-size: 1.1rem; color: var(--md-sys-color-primary); font-weight: 600;">Mode Download</label>
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; cursor: pointer; flex: 1; border: 1px solid rgba(255,255,255,0.1);">
+                                <input type="radio" name="dl_mode" value="zip" checked style="width: 1.2rem; height: 1.2rem;">
+                                <div>
+                                    <strong style="display: block; color: #fff;">File ZIP (Rapi)</strong>
+                                    <span style="font-size: 0.8rem; color: var(--text-secondary);">Dikelompokkan dalam folder. Membutuhkan Proxy, rawan diblokir Google.</span>
+                                </div>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; cursor: pointer; flex: 1; border: 1px solid rgba(255,255,255,0.1);">
+                                <input type="radio" name="dl_mode" value="direct" style="width: 1.2rem; height: 1.2rem;">
+                                <div>
+                                    <strong style="display: block; color: #fff;">Download Langsung</strong>
+                                    <span style="font-size: 0.8rem; color: var(--text-secondary);">100% Berhasil. File langsung masuk ke folder Downloads komputer (Tanpa Folder).</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
                     <div class="form-group">
                         <label for="sheet-url">Link Google Sheet</label>
                         <input type="text" id="sheet-url" class="form-control" placeholder="https://docs.google.com/spreadsheets/d/14gj_TmjM2EfPo.../edit">
@@ -314,8 +332,8 @@
                         
                         <div style="margin-top: 2rem;">
                             <button id="btn-download" class="btn btn-primary" style="background: #10b981; width: 100%; justify-content: center;" onclick="startDownload()">
-                                <span class="material-symbols-outlined">archive</span>
-                                Mulai Download (ZIP)
+                                <span class="material-symbols-outlined">download</span>
+                                Mulai Proses Download
                             </button>
                         </div>
                     </div>
@@ -466,102 +484,129 @@
             btn.disabled = true;
             btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 2s linear infinite;">sync</span> Memproses...';
             
-            const zip = new JSZip();
+            const mode = document.querySelector('input[name="dl_mode"]:checked').value;
+            const zip = mode === 'zip' ? new JSZip() : null;
             let totalRows = sheetData.length;
             let processedRows = 0;
             let successFiles = 0;
             
-            logMsg(`Memulai pemrosesan untuk ${totalRows} baris...`);
+            logMsg(`Memulai pemrosesan untuk ${totalRows} baris dengan mode: ${mode.toUpperCase()}...`);
+            
+            const proxies = [
+                "https://api.codetabs.com/v1/proxy?quest=",
+                "https://corsproxy.io/?",
+                "https://api.allorigins.win/raw?url="
+            ];
             
             for (let i = 0; i < sheetData.length; i++) {
                 const row = sheetData[i];
                 processedRows++;
                 
-                // Update Progress UI
                 const percent = Math.round((processedRows / totalRows) * 100);
                 document.getElementById('progress-text').innerText = `Memproses Baris ${processedRows} / ${totalRows}`;
                 document.getElementById('progress-percent').innerText = `${percent}%`;
                 document.getElementById('progress-bar').style.width = `${percent}%`;
                 
-                // Buat Nama Folder
                 let folderNameParts = [];
                 for (const col of folderCols) {
                     if (row[col]) folderNameParts.push(row[col].trim());
                 }
-                let folderName = folderNameParts.join(' - ').replace(/[/\\?%*:|"<>]/g, '-'); // Sanitize
+                let folderName = folderNameParts.join(' - ').replace(/[/\\?%*:|"<>]/g, '-');
                 
                 if (!folderName) {
                     folderName = `Baris_${i+1}`;
                 }
                 
-                // Proses setiap link
                 for (const linkCol of linkCols) {
                     const cellValue = row[linkCol];
                     if (cellValue && cellValue.includes('drive.google.com')) {
                         const fileId = extractDriveFileId(cellValue);
                         if (fileId) {
-                            try {
-                                logMsg(`Mendownload file untuk [${folderName}] dari kolom [${linkCol}]...`);
-                                
-                                const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-                                
-                                // Fetch langsung tanpa proxy (Mewajibkan ekstensi Allow CORS)
-                                const response = await fetch(downloadUrl);
-                                
-                                if (!response.ok) {
-                                    if (response.status === 403) {
-                                        throw new Error(`HTTP 403 Akses Ditolak. Pastikan file GDrive "Open Access" dan ekstensi Allow CORS sudah dinyalakan.`);
-                                    }
-                                    throw new Error(`HTTP Error ${response.status}`);
-                                }
-                                
-                                const blob = await response.blob();
-                                
-                                // Coba dapatkan nama file dari headers, jika tidak ada, gunakan nama kolom
-                                let fileName = `${linkCol}.pdf`; // Fallback ext default
-                                const disposition = response.headers.get('content-disposition');
-                                if (disposition && disposition.indexOf('filename=') !== -1) {
-                                    const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-                                    const matches = filenameRegex.exec(disposition);
-                                    if (matches != null && matches[1]) { 
-                                        fileName = matches[1].replace(/['"]/g, '');
-                                    }
-                                } else {
-                                    // if it's an image
-                                    if(blob.type.includes('image/jpeg')) fileName = `${linkCol}.jpg`;
-                                    else if(blob.type.includes('image/png')) fileName = `${linkCol}.png`;
-                                    else if(blob.type.includes('application/pdf')) fileName = `${linkCol}.pdf`;
-                                    else fileName = `${linkCol}_file`;
-                                }
-                                
-                                // Simpan ke ZIP
-                                zip.folder(folderName).file(fileName, blob);
+                            const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+                            
+                            if (mode === 'direct') {
+                                logMsg(`Memicu download langsung untuk [${folderName}] - [${linkCol}]...`, 'success');
+                                const a = document.createElement('a');
+                                a.href = downloadUrl;
+                                a.target = '_blank'; 
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
                                 successFiles++;
-                                logMsg(`Berhasil menambahkan ${fileName} ke folder ${folderName}`, 'success');
                                 
-                            } catch (err) {
-                                logMsg(`Gagal mendownload dari kolom [${linkCol}] pada baris ke-${i+1}: ${err.message}`, 'error');
+                                await new Promise(r => setTimeout(r, 500)); 
+                            } else {
+                                try {
+                                    logMsg(`Mengambil file untuk [${folderName}] - [${linkCol}]...`);
+                                    
+                                    let response = null;
+                                    let fetchSuccess = false;
+                                    let lastStatus = 0;
+                                    
+                                    for (const proxy of proxies) {
+                                        try {
+                                            response = await fetch(proxy + encodeURIComponent(downloadUrl));
+                                            if (response.ok) {
+                                                fetchSuccess = true;
+                                                break;
+                                            }
+                                            lastStatus = response.status;
+                                        } catch (e) { }
+                                    }
+                                    
+                                    if (!fetchSuccess) {
+                                         throw new Error(`HTTP Error ${lastStatus || 'Unknown'}. Proxy ditolak oleh Google.`);
+                                    }
+                                    
+                                    const blob = await response.blob();
+                                    
+                                    let fileName = `${linkCol}.pdf`;
+                                    const disposition = response.headers ? response.headers.get('content-disposition') : null;
+                                    if (disposition && disposition.indexOf('filename=') !== -1) {
+                                        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                                        const matches = filenameRegex.exec(disposition);
+                                        if (matches != null && matches[1]) { 
+                                            fileName = matches[1].replace(/['"]/g, '');
+                                        }
+                                    } else {
+                                        if(blob.type.includes('image/jpeg')) fileName = `${linkCol}.jpg`;
+                                        else if(blob.type.includes('image/png')) fileName = `${linkCol}.png`;
+                                        else if(blob.type.includes('application/pdf')) fileName = `${linkCol}.pdf`;
+                                        else fileName = `${linkCol}_file`;
+                                    }
+                                    
+                                    zip.folder(folderName).file(fileName, blob);
+                                    successFiles++;
+                                    logMsg(`Berhasil menambahkan ${fileName} ke ZIP`, 'success');
+                                    
+                                } catch (err) {
+                                    logMsg(`Gagal: ${err.message}`, 'error');
+                                }
                             }
                         }
                     }
                 }
             }
             
-            if (successFiles > 0) {
-                logMsg(`Semua baris diproses. Sedang membuat file ZIP (${successFiles} file)...`, "success");
-                try {
-                    const content = await zip.generateAsync({type:"blob"});
-                    saveAs(content, "Hasil_Download_GDrive.zip");
-                    logMsg("File ZIP berhasil dibuat dan didownload!", "success");
-                } catch (err) {
-                    logMsg(`Gagal membuat ZIP: ${err.message}`, 'error');
+            if (mode === 'zip') {
+                if (successFiles > 0) {
+                    logMsg(`Semua baris diproses. Sedang membuat file ZIP (${successFiles} file)...`, "success");
+                    try {
+                        const content = await zip.generateAsync({type:"blob"});
+                        saveAs(content, "Hasil_Download_GDrive.zip");
+                        logMsg("File ZIP berhasil dibuat dan didownload!", "success");
+                    } catch (err) {
+                        logMsg(`Gagal membuat ZIP: ${err.message}`, 'error');
+                    }
+                } else {
+                    logMsg("Tidak ada file valid yang berhasil didownload via Proxy.", "error");
                 }
             } else {
-                logMsg("Tidak ada file valid yang berhasil didownload.", "error");
+                logMsg(`Selesai! Sebanyak ${successFiles} perintah download langsung telah dijalankan.`, "success");
             }
             
             btn.disabled = false;
-            btn.innerHTML = '<span class="material-symbols-outlined">archive</span> Mulai Download (ZIP)';
+            btn.innerHTML = '<span class="material-symbols-outlined">download</span> Mulai Proses Download';
         }
     </script>
 </body>

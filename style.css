@@ -293,19 +293,21 @@ body {
 }
 
 /* Buttons */
-.glass-btn {
+.glass-btn, .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.6rem;
-    padding: 0.9rem 2rem;
+    padding: 0.85rem 1.8rem;
     border-radius: 14px;
     cursor: pointer;
     font-weight: 600;
-    font-size: 1.05rem;
+    font-size: 1rem;
     font-family: inherit;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: none;
+    text-decoration: none;
+    user-select: none;
 }
 
 .btn-primary {
@@ -321,12 +323,15 @@ body {
 }
 
 .btn-secondary {
-    background-color: var(--md-sys-color-surface-variant);
-    color: var(--md-sys-color-primary);
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--md-sys-color-on-surface-variant);
 }
 
 .btn-secondary:hover {
-    background-color: rgba(255,255,255,0.1);
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: var(--md-sys-color-on-surface);
     transform: translateY(-2px);
 }
 

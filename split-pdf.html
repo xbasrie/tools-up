@@ -179,6 +179,58 @@
                 grid-template-columns: 1fr !important;
             }
         }
+        
+        /* Dedicated Button Styles */
+        .glass-btn, .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            padding: 0.85rem 1.8rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+            text-decoration: none;
+            user-select: none;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .btn-primary:hover {
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.5);
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+        }
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .btn-secondary {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #cbd5e1;
+        }
+        .btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.25);
+            color: #ffffff;
+            transform: translateY(-2px);
+        }
+        .btn-secondary:active {
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body>
@@ -322,12 +374,14 @@
                             </div>
                         </div>
                         
-                        <div style="margin-top: 2rem; display: flex; gap: 1rem;">
-                            <button id="btnSplit" class="btn btn-primary" style="flex: 1; padding: 1rem; font-size: 1.1rem;">
-                                <span class="material-symbols-outlined">cut</span> Eksekusi PDF
+                        <div class="form-actions" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: flex-end; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                            <button id="btnCancel" type="button" class="btn btn-secondary glass-btn" style="padding: 0.85rem 1.6rem; border-radius: 12px; font-size: 0.95rem;">
+                                <span class="material-symbols-outlined" style="font-size: 1.2rem;">close</span>
+                                <span>Batal</span>
                             </button>
-                            <button id="btnCancel" class="btn btn-secondary" style="padding: 1rem;">
-                                <span class="material-symbols-outlined">close</span> Batal
+                            <button id="btnSplit" type="button" class="btn btn-primary glass-btn" style="padding: 0.85rem 2rem; font-size: 1.05rem; border-radius: 12px; min-width: 200px;">
+                                <span class="material-symbols-outlined" style="font-size: 1.25rem;">content_cut</span>
+                                <span>Eksekusi PDF</span>
                             </button>
                         </div>
                         
@@ -344,12 +398,12 @@
                         </div>
                         <h3 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">Berhasil Diproses</h3>
                         <p style="color: var(--text-muted); margin-bottom: 2rem;">File Anda telah berhasil dipisahkan dan siap diunduh.</p>
-                        <div style="display: flex; gap: 1rem; justify-content: center;">
-                            <a id="btnDownloadResult" href="#" class="btn btn-primary" style="display: inline-flex; padding: 1rem 2rem;">
-                                <span class="material-symbols-outlined">download</span> Unduh Hasil
+                        <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                            <a id="btnDownloadResult" href="#" class="btn btn-primary glass-btn" style="display: inline-flex; padding: 0.9rem 2rem; border-radius: 12px;">
+                                <span class="material-symbols-outlined" style="font-size: 1.25rem;">download</span> Unduh Hasil
                             </a>
-                            <button id="btnReset" class="btn btn-secondary" style="padding: 1rem 2rem; display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text); border-radius: 8px; cursor: pointer;">
-                                <span class="material-symbols-outlined">refresh</span> Proses File Lain
+                            <button id="btnReset" type="button" class="btn btn-secondary glass-btn" style="padding: 0.9rem 2rem; display: inline-flex; align-items: center; gap: 0.5rem; border-radius: 12px;">
+                                <span class="material-symbols-outlined" style="font-size: 1.25rem;">refresh</span> Proses File Lain
                             </button>
                         </div>
                     </div>

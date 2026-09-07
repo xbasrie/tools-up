@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tools Kepegawaian - Kalkulasi Masa Kerja</title>
+    <title>Tools Kepegawaian - Portal & Utilitas Administrasi ASN</title>
+    <meta name="description" content="Pusat utilitas dan otomatisasi cerdas kepegawaian Kemenag: kalkulasi masa kerja, kalkulator tanggal, alat PDF, bulk download, dan analisis data ASN.">
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Material Symbols -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
     <!-- Custom CSS -->
@@ -23,186 +24,410 @@
         <main class="main-panel glass-panel">
             <header class="top-bar">
                 <div class="page-title">
-                    <h1>Kalkulasi Masa Kerja</h1>
-                    <p class="subtitle">Kelola dan proses perhitungan masa kerja pegawai</p>
+                    <h1>Portal Tools Kepegawaian</h1>
+                    <p class="subtitle">Pusat utilitas & otomatisasi cerdas untuk efisiensi administrasi ASN, manajemen berkas, dan layanan kepegawaian</p>
                 </div>
             </header>
-            
+
             <section class="content-area">
-                <!-- Form Area -->
-                <div class="card glass-card full-width" style="padding: 2.5rem;">
-                    <div class="card-header" style="margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">
-                        <h3 style="font-size: 1.5rem; display: flex; align-items: center; gap: 0.8rem;">
-                            <span class="material-symbols-outlined text-accent" style="font-size: 2rem;">calculate</span> 
-                            Kalkulator Hitung Masa Kerja
-                        </h3>
-                        <p class="subtitle" style="margin-top: 0.5rem; color: var(--text-muted);">Masukkan parameter masa kerja untuk mendapatkan TMT Dasar Fiktif dan total masa kerja yang akurat.</p>
+                <!-- Summary Metrics Bar -->
+                <div class="hub-stats-bar">
+                    <div class="hub-stat-card">
+                        <div class="hub-stat-icon-wrapper blue">
+                            <span class="material-symbols-outlined">widgets</span>
+                        </div>
+                        <div class="hub-stat-info">
+                            <span class="hub-stat-value" id="statTotalTools">9</span>
+                            <span class="hub-stat-label">Utilitas Siap Pakai</span>
+                        </div>
                     </div>
-                    <form id="kalkulatorForm" class="glass-form premium-form">
-                        
-                        <!-- Row 1: Dates -->
-                        <div class="form-section">
-                            <h4 class="section-title"><span class="material-symbols-outlined">event</span> Informasi Tanggal</h4>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>TMT CPNS/PNS</label>
-                                    <input type="date" id="tanggal_awal_hitung" required class="glass-input-field date-input">
-                                </div>
-                                <div class="form-group">
-                                    <label>Tanggal Akhir (Batas Hitung)</label>
-                                    <input type="date" id="tanggal_akhir" required class="glass-input-field date-input">
-                                </div>
-                            </div>
+                    <div class="hub-stat-card">
+                        <div class="hub-stat-icon-wrapper purple">
+                            <span class="material-symbols-outlined">category</span>
                         </div>
-
-                        <!-- Row 2: Masa Kerja & PMK -->
-                        <div class="form-row split-row">
-                            <div class="form-section">
-                                <h4 class="section-title"><span class="material-symbols-outlined">history</span> Masa Kerja Lama</h4>
-                                <div class="form-row inner-row">
-                                    <div class="form-group">
-                                        <label>Tahun</label>
-                                        <input type="number" id="mk_tahun" value="0" min="0" required class="glass-input-field">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Bulan</label>
-                                        <input type="number" id="mk_bulan" value="0" min="0" required class="glass-input-field">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="form-section">
-                                <h4 class="section-title"><span class="material-symbols-outlined">update</span> Peninjauan (PMK)</h4>
-                                <div class="form-row inner-row">
-                                    <div class="form-group">
-                                        <label>Tahun</label>
-                                        <input type="number" id="pmk_tahun" value="0" min="0" required class="glass-input-field">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Bulan</label>
-                                        <input type="number" id="pmk_bulan" value="0" min="0" required class="glass-input-field">
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="hub-stat-info">
+                            <span class="hub-stat-value">4</span>
+                            <span class="hub-stat-label">Kategori Layanan</span>
                         </div>
-
-                        <!-- Row 3: Pengurangan & Submit -->
-                        <div class="form-row align-end" style="margin-top: 1rem;">
-                            <div class="form-section flex-grow">
-                                <h4 class="section-title"><span class="material-symbols-outlined">remove_circle_outline</span> Pengurangan MK</h4>
-                                <div class="form-group" style="max-width: 200px;">
-                                    <label>Total Tahun</label>
-                                    <input type="number" id="pengurangan_mk" value="0" min="0" required class="glass-input-field">
-                                </div>
-                            </div>
-                            <div class="form-actions">
-                                <button type="submit" class="btn-primary glass-btn large-btn" style="padding: 1rem 2rem; font-size: 1.1rem; border-radius: 12px;">
-                                    <span class="material-symbols-outlined">bolt</span> 
-                                    <span>Kalkulasi Sekarang</span>
-                                </button>
-                            </div>
+                    </div>
+                    <div class="hub-stat-card">
+                        <div class="hub-stat-icon-wrapper emerald">
+                            <span class="material-symbols-outlined">speed</span>
                         </div>
-                    </form>
+                        <div class="hub-stat-info">
+                            <span class="hub-stat-value">Client-Side</span>
+                            <span class="hub-stat-label">Cepat & Aman</span>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Result Area -->
-                <div class="card glass-card result-card full-width" id="resultContainer" style="display: none; margin-top: 2rem; padding: 2.5rem; background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.3); box-shadow: 0 0 30px rgba(0,229,255,0.1);">
-                    <div class="result-header" style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem;">
-                        <div class="result-icon-wrapper success-glow" style="width: 60px; height: 60px; background: rgba(0,230,118,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--success); box-shadow: 0 0 20px rgba(0,230,118,0.4);">
-                            <span class="material-symbols-outlined" style="font-size: 2.5rem;">check_circle</span>
-                        </div>
-                        <div>
-                            <h3 class="result-title" style="font-size: 1.5rem; font-weight: 700;">Kalkulasi Berhasil</h3>
-                            <p class="result-subtitle" style="color: var(--text-secondary); margin-top: 0.3rem;">Perhitungan otomatis memecahkan masa kerja dengan presisi.</p>
-                        </div>
+                <!-- Interactive Filter & Search Controls -->
+                <div class="hub-controls-section">
+                    <div class="hub-search-wrapper">
+                        <span class="material-symbols-outlined hub-search-icon">search</span>
+                        <input type="text" id="toolSearchInput" class="hub-search-input" placeholder="Cari tools atau kata kunci (contoh: masa kerja, split, kompres, gdrive, srikandi)..." autocomplete="off">
+                        <span class="hub-search-shortcut" title="Tekan tombol '/' untuk langsung mencari">/</span>
                     </div>
+
+                    <div class="hub-filter-chips" id="categoryChips">
+                        <button type="button" class="hub-chip active" data-category="all">
+                            <span>Semua Tools</span>
+                            <span class="hub-chip-count" id="countAll">9</span>
+                        </button>
+                        <button type="button" class="hub-chip" data-category="kepegawaian">
+                            <span class="material-symbols-outlined" style="font-size: 1.1rem;">badge</span>
+                            <span>Kepegawaian & Tanggal</span>
+                            <span class="hub-chip-count">2</span>
+                        </button>
+                        <button type="button" class="hub-chip" data-category="pdf">
+                            <span class="material-symbols-outlined" style="font-size: 1.1rem;">picture_as_pdf</span>
+                            <span>Alat PDF</span>
+                            <span class="hub-chip-count">3</span>
+                        </button>
+                        <button type="button" class="hub-chip" data-category="otomasi">
+                            <span class="material-symbols-outlined" style="font-size: 1.1rem;">bolt</span>
+                            <span>Otomasi & Unduhan</span>
+                            <span class="hub-chip-count">2</span>
+                        </button>
+                        <button type="button" class="hub-chip" data-category="analisis">
+                            <span class="material-symbols-outlined" style="font-size: 1.1rem;">analytics</span>
+                            <span>Analisis & SIMPEG</span>
+                            <span class="hub-chip-count">2</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tools Showcase Grid -->
+                <div class="hub-grid" id="toolsGrid">
                     
-                    <div class="result-data-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem;">
-                        <div class="data-item" style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
-                            <span class="data-label" style="display: block; font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.5rem;">TMT Dasar Fiktif</span>
-                            <span class="data-value text-accent" id="res_tmt_dasar" style="font-size: 2rem; font-weight: 700; letter-spacing: 1px;">-</span>
+                    <!-- 1. Kalkulasi Masa Kerja -->
+                    <a href="kalkulasi-masa-kerja.html" class="hub-card" data-category="kepegawaian" data-keywords="kalkulasi masa kerja tmt dasar fiktif pmk peninjauan pengurangan sk cpns pns hitung tahun bulan hari">
+                        <div class="hub-card-header">
+                            <div class="hub-card-icon icon-emerald">
+                                <span class="material-symbols-outlined">calculate</span>
+                            </div>
+                            <span class="hub-card-badge highlight">Akurat</span>
                         </div>
-                        <div class="data-item highlight" style="background: linear-gradient(135deg, rgba(0,230,118,0.1), rgba(0,230,118,0.05)); padding: 1.5rem; border-radius: 16px; border: 1px solid rgba(0,230,118,0.3);">
-                            <span class="data-label" style="display: block; font-size: 0.9rem; color: var(--success); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.5rem;">Total Masa Kerja Pegawai</span>
-                            <span class="data-value text-success" id="res_string" style="font-size: 2.2rem; font-weight: 800; display: block; margin-bottom: 0.5rem; text-shadow: 0 0 15px rgba(0,230,118,0.5);"></span>
-                            <span class="data-subvalue" id="res_detail" style="font-size: 1rem; color: rgba(255,255,255,0.7);"></span>
+                        <div class="hub-card-body">
+                            <h2 class="hub-card-title">Kalkulasi Masa Kerja</h2>
+                            <p class="hub-card-desc">Hitung TMT Dasar Fiktif, akumulasi Peninjauan Masa Kerja (PMK), dan total masa kerja pegawai secara presisi hingga tanggal batas hitung.</p>
+                            <div class="hub-card-tags">
+                                <span class="hub-tag">TMT Dasar Fiktif</span>
+                                <span class="hub-tag">Akumulasi PMK</span>
+                                <span class="hub-tag">Pengurangan MK</span>
+                            </div>
                         </div>
+                        <div class="hub-card-footer">
+                            <span class="hub-card-action">
+                                <span>Buka Kalkulator</span>
+                                <span class="material-symbols-outlined">arrow_forward</span>
+                            </span>
+                        </div>
+                    </a>
+
+                    <!-- 2. Kalkulator Tanggal -->
+                    <a href="kalkulator-tanggal.html" class="hub-card" data-category="kepegawaian" data-keywords="kalkulator tanggal selisih hari pensiun bup batas usia pensiun kenaikan pangkat kp kalender kerja kalender hari">
+                        <div class="hub-card-header">
+                            <div class="hub-card-icon icon-blue">
+                                <span class="material-symbols-outlined">event_note</span>
+                            </div>
+                            <span class="hub-card-badge">Multi-Fitur</span>
+                        </div>
+                        <div class="hub-card-body">
+                            <h2 class="hub-card-title">Kalkulator Tanggal</h2>
+                            <p class="hub-card-desc">Hitung rentang & selisih hari kerja, proyeksi periode kenaikan pangkat reguler/fungsional, serta hitung batas usia pensiun (BUP) ASN.</p>
+                            <div class="hub-card-tags">
+                                <span class="hub-tag">Selisih Hari</span>
+                                <span class="hub-tag">Batas Usia Pensiun</span>
+                                <span class="hub-tag">Proyeksi KP</span>
+                            </div>
+                        </div>
+                        <div class="hub-card-footer">
+                            <span class="hub-card-action">
+                                <span>Buka Kalkulator</span>
+                                <span class="material-symbols-outlined">arrow_forward</span>
+                            </span>
+                        </div>
+                    </a>
+
+                    <!-- 3. Split PDF -->
+                    <a href="split-pdf.html" class="hub-card" data-category="pdf" data-keywords="split pdf pisahkan dokumen potong halaman ijazah sk kolektif zip per halaman rentang">
+                        <div class="hub-card-header">
+                            <div class="hub-card-icon icon-purple">
+                                <span class="material-symbols-outlined">vertical_split</span>
+                            </div>
+                            <span class="hub-card-badge highlight">Instan</span>
+                        </div>
+                        <div class="hub-card-body">
+                            <h2 class="hub-card-title">Split PDF</h2>
+                            <p class="hub-card-desc">Pisahkan dokumen PDF besar seperti SK Kolektif atau berkas lampiran menjadi file perorangan atau rentang halaman dengan pratinjau visual.</p>
+                            <div class="hub-card-tags">
+                                <span class="hub-tag">Split per Halaman</span>
+                                <span class="hub-tag">Rentang Halaman</span>
+                                <span class="hub-tag">Export ZIP</span>
+                            </div>
+                        </div>
+                        <div class="hub-card-footer">
+                            <span class="hub-card-action">
+                                <span>Buka Alat Split</span>
+                                <span class="material-symbols-outlined">arrow_forward</span>
+                            </span>
+                        </div>
+                    </a>
+
+                    <!-- 4. Merge PDF -->
+                    <a href="merge-pdf.html" class="hub-card" data-category="pdf" data-keywords="merge pdf gabungkan berkas dokumen satukan pdf drag drop susun urutan halaman multi file">
+                        <div class="hub-card-header">
+                            <div class="hub-card-icon icon-indigo">
+                                <span class="material-symbols-outlined">library_add</span>
+                            </div>
+                            <span class="hub-card-badge">Drag & Drop</span>
+                        </div>
+                        <div class="hub-card-body">
+                            <h2 class="hub-card-title">Merge PDF</h2>
+                            <p class="hub-card-desc">Gabungkan berbagai berkas usulan (SK, ijazah, bukti dukung) menjadi satu dokumen PDF rapi dengan kemudahan mengatur urutan file secara interaktif.</p>
+                            <div class="hub-card-tags">
+                                <span class="hub-tag">Multi Dokumen</span>
+                                <span class="hub-tag">Atur Urutan</span>
+                                <span class="hub-tag">Pratinjau Berkas</span>
+                            </div>
+                        </div>
+                        <div class="hub-card-footer">
+                            <span class="hub-card-action">
+                                <span>Buka Alat Merge</span>
+                                <span class="material-symbols-outlined">arrow_forward</span>
+                            </span>
+                        </div>
+                    </a>
+
+                    <!-- 5. Kompres PDF -->
+                    <a href="compress-pdf.html" class="hub-card" data-category="pdf" data-keywords="kompres pdf compress perkecil ukuran file dokumen kuota upload resolusi preset kualitas">
+                        <div class="hub-card-header">
+                            <div class="hub-card-icon icon-amber">
+                                <span class="material-symbols-outlined">compress</span>
+                            </div>
+                            <span class="hub-card-badge">Optimal</span>
+                        </div>
+                        <div class="hub-card-body">
+                            <h2 class="hub-card-title">Kompres PDF</h2>
+                            <p class="hub-card-desc">Kecilkan ukuran dokumen PDF agar memenuhi batas kuota unggah portal instansi tanpa mengorbankan keterbacaan teks dan cap stempel resmi.</p>
+                            <div class="hub-card-tags">
+                                <span class="hub-tag">Preset Kualitas</span>
+                                <span class="hub-tag">Hemat Kuota</span>
+                                <span class="hub-tag">Client-Side</span>
+                            </div>
+                        </div>
+                        <div class="hub-card-footer">
+                            <span class="hub-card-action">
+                                <span>Buka Kompresor</span>
+                                <span class="material-symbols-outlined">arrow_forward</span>
+                            </span>
+                        </div>
+                    </a>
+
+                    <!-- 6. Bulk Download GDrive -->
+                    <a href="bulk-download-gdrive.html" class="hub-card" data-category="otomasi" data-keywords="bulk download gdrive google drive spreadsheet unduh massal berkas link zip batch spreadsheet">
+                        <div class="hub-card-header">
+                            <div class="hub-card-icon icon-teal">
+                                <span class="material-symbols-outlined">cloud_download</span>
+                            </div>
+                            <span class="hub-card-badge highlight">Massal</span>
+                        </div>
+                        <div class="hub-card-body">
+                            <h2 class="hub-card-title">Bulk Download GDrive</h2>
+                            <p class="hub-card-desc">Unduh puluhan hingga ratusan berkas dari daftar tautan Google Drive spreadsheet sekaligus dan otomatis dikemas dalam satu arsip ZIP.</p>
+                            <div class="hub-card-tags">
+                                <span class="hub-tag">Ekstrak Link Sheet</span>
+                                <span class="hub-tag">Auto ZIP</span>
+                                <span class="hub-tag">Download Paralel</span>
+                            </div>
+                        </div>
+                        <div class="hub-card-footer">
+                            <span class="hub-card-action">
+                                <span>Buka Downloader</span>
+                                <span class="material-symbols-outlined">arrow_forward</span>
+                            </span>
+                        </div>
+                    </a>
+
+                    <!-- 7. Bulk Srikandi Sender -->
+                    <a href="bulk-srikandi.html" class="hub-card" data-category="otomasi" data-keywords="bulk srikandi sender naskah dinas surat otomatis kirim disposisi api persuratan log kirim">
+                        <div class="hub-card-header">
+                            <div class="hub-card-icon icon-rose">
+                                <span class="material-symbols-outlined">send</span>
+                            </div>
+                            <span class="hub-card-badge">Automasi</span>
+                        </div>
+                        <div class="hub-card-body">
+                            <h2 class="hub-card-title">Bulk Srikandi Sender</h2>
+                            <p class="hub-card-desc">Otomatisasi pengiriman dan integrasi naskah dinas pada aplikasi Srikandi Kemenag untuk mempercepat alur disposisi berkas persuratan.</p>
+                            <div class="hub-card-tags">
+                                <span class="hub-tag">Integrasi Naskah</span>
+                                <span class="hub-tag">Batch Dispatch</span>
+                                <span class="hub-tag">Monitoring Status</span>
+                            </div>
+                        </div>
+                        <div class="hub-card-footer">
+                            <span class="hub-card-action">
+                                <span>Buka Pengirim Naskah</span>
+                                <span class="material-symbols-outlined">arrow_forward</span>
+                            </span>
+                        </div>
+                    </a>
+
+                    <!-- 8. DUK Generator -->
+                    <a href="duk-generator.html" class="hub-card" data-category="analisis" data-keywords="duk generator daftar urut kepangkatan simpeg excel nip pangkat golongan jabatan asatidz pns pppk">
+                        <div class="hub-card-header">
+                            <div class="hub-card-icon icon-emerald">
+                                <span class="material-symbols-outlined">receipt_long</span>
+                            </div>
+                            <span class="hub-card-badge">SIMPEG Data</span>
+                        </div>
+                        <div class="hub-card-body">
+                            <h2 class="hub-card-title">DUK Generator</h2>
+                            <p class="hub-card-desc">Automasi pembuatan Daftar Urut Kepangkatan (DUK) pegawai dari file Excel daftar NIP dengan sinkronisasi data profil melalui API SIMPEG.</p>
+                            <div class="hub-card-tags">
+                                <span class="hub-tag">Input Excel NIP</span>
+                                <span class="hub-tag">API SIMPEG Kemenag</span>
+                                <span class="hub-tag">Export Format Resmi</span>
+                            </div>
+                        </div>
+                        <div class="hub-card-footer">
+                            <span class="hub-card-action">
+                                <span>Buka Generator DUK</span>
+                                <span class="material-symbols-outlined">arrow_forward</span>
+                            </span>
+                        </div>
+                    </a>
+
+                    <!-- 9. Peta Jabatan -->
+                    <a href="peta-jabatan.html" class="hub-card" data-category="analisis" data-keywords="peta jabatan analisis formasi struktur organisasi bezetting kebutuhan pegawai diagram anjab abk">
+                        <div class="hub-card-header">
+                            <div class="hub-card-icon icon-purple">
+                                <span class="material-symbols-outlined">account_tree</span>
+                            </div>
+                            <span class="hub-card-badge">Visualisasi</span>
+                        </div>
+                        <div class="hub-card-body">
+                            <h2 class="hub-card-title">Peta Jabatan</h2>
+                            <p class="hub-card-desc">Visualisasi interaktif struktur organisasi dan analisis bezetting formasi pegawai berbasis data DUK untuk perencanaan tata kelola ASN.</p>
+                            <div class="hub-card-tags">
+                                <span class="hub-tag">Diagram Hirarki</span>
+                                <span class="hub-tag">Analisis Bezetting</span>
+                                <span class="hub-tag">Data DUK Excel</span>
+                            </div>
+                        </div>
+                        <div class="hub-card-footer">
+                            <span class="hub-card-action">
+                                <span>Buka Peta Jabatan</span>
+                                <span class="material-symbols-outlined">arrow_forward</span>
+                            </span>
+                        </div>
+                    </a>
+
+                    <!-- Empty State Container -->
+                    <div id="hubEmptyState" class="hub-empty-state" style="display: none;">
+                        <span class="material-symbols-outlined hub-empty-icon">search_off</span>
+                        <h3 class="hub-empty-title">Tidak Ada Tools Ditemukan</h3>
+                        <p class="hub-empty-desc" id="emptyStateMsg">Tidak ada alat yang cocok dengan kata kunci pencarian Anda.</p>
+                        <button type="button" id="btnResetFilter" class="btn btn-secondary">
+                            <span class="material-symbols-outlined">refresh</span>
+                            <span>Reset Pencarian</span>
+                        </button>
                     </div>
+
                 </div>
             </section>
-
-            <script>
-                document.getElementById('kalkulatorForm').addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    
-                    try {
-                        const tmtAwalStr = document.getElementById('tanggal_awal_hitung').value;
-                        const tglAkhirStr = document.getElementById('tanggal_akhir').value;
-                        
-                        if (!tmtAwalStr || !tglAkhirStr) {
-                            alert('TMT Awal dan Tanggal Akhir harus diisi.');
-                            return;
-                        }
-
-                        const mkTahun = parseInt(document.getElementById('mk_tahun').value) || 0;
-                        const mkBulan = parseInt(document.getElementById('mk_bulan').value) || 0;
-                        const pmkTahun = parseInt(document.getElementById('pmk_tahun').value) || 0;
-                        const pmkBulan = parseInt(document.getElementById('pmk_bulan').value) || 0;
-                        const pengurangMk = parseInt(document.getElementById('pengurangan_mk').value) || 0;
-
-                        // 1. TMT Dasar
-                        // JS Date constructor handles YYYY-MM-DD correctly
-                        let tmtDasar = new Date(tmtAwalStr);
-                        
-                        let tahunPengurang = mkTahun + pmkTahun - pengurangMk;
-                        let bulanPengurang = mkBulan + pmkBulan;
-                        
-                        // JS natively handles rollover automatically (e.g. Month -5 goes to previous year)
-                        tmtDasar.setFullYear(tmtDasar.getFullYear() - tahunPengurang);
-                        tmtDasar.setMonth(tmtDasar.getMonth() - bulanPengurang);
-                        
-                        // Format output YYYY-MM-DD
-                        const yyyy = tmtDasar.getFullYear();
-                        const mm = String(tmtDasar.getMonth() + 1).padStart(2, '0');
-                        const dd = String(tmtDasar.getDate()).padStart(2, '0');
-                        const tmtDasarFormatted = `${yyyy}-${mm}-${dd}`;
-
-                        // 2. Selisih dengan Tanggal Akhir
-                        let tglAkhir = new Date(tglAkhirStr);
-                        
-                        let years = tglAkhir.getFullYear() - tmtDasar.getFullYear();
-                        let months = tglAkhir.getMonth() - tmtDasar.getMonth();
-                        let days = tglAkhir.getDate() - tmtDasar.getDate();
-
-                        if (days < 0) {
-                            months--;
-                            // Get days in the previous month of the end date
-                            let previousMonth = new Date(tglAkhir.getFullYear(), tglAkhir.getMonth(), 0);
-                            days += previousMonth.getDate();
-                        }
-
-                        if (months < 0) {
-                            years--;
-                            months += 12;
-                        }
-
-                        // 3. Tampilkan Hasil
-                        document.getElementById('resultContainer').style.display = 'block';
-                        document.getElementById('res_tmt_dasar').innerText = tmtDasarFormatted;
-                        document.getElementById('res_string').innerText = `${years} Tahun ${months} Bulan ${days} Hari`;
-                        document.getElementById('res_detail').innerText = `Dihitung hingga ${tglAkhirStr}`;
-                        
-                        // Optional scroll to result
-                        document.getElementById('resultContainer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                        
-                    } catch (err) {
-                        alert("Terjadi kesalahan pada perhitungan.");
-                        console.error(err);
-                    }
-                });
-            </script>
         </main>
     </div>
+
+    <!-- Interactive Filtering & Search Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('toolSearchInput');
+            const categoryChips = document.querySelectorAll('.hub-chip');
+            const cards = document.querySelectorAll('.hub-card');
+            const emptyState = document.getElementById('hubEmptyState');
+            const emptyStateMsg = document.getElementById('emptyStateMsg');
+            const btnReset = document.getElementById('btnResetFilter');
+            const countAllBadge = document.getElementById('countAll');
+            const statTotalTools = document.getElementById('statTotalTools');
+
+            let currentCategory = 'all';
+
+            function filterTools() {
+                const query = searchInput.value.toLowerCase().trim();
+                let visibleCount = 0;
+
+                cards.forEach(card => {
+                    const category = card.getAttribute('data-category');
+                    const keywords = (card.getAttribute('data-keywords') || '').toLowerCase();
+                    const title = card.querySelector('.hub-card-title').innerText.toLowerCase();
+                    const desc = card.querySelector('.hub-card-desc').innerText.toLowerCase();
+
+                    const matchesCategory = (currentCategory === 'all' || category === currentCategory);
+                    const matchesQuery = !query || title.includes(query) || desc.includes(query) || keywords.includes(query);
+
+                    if (matchesCategory && matchesQuery) {
+                        card.style.display = 'flex';
+                        visibleCount++;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+
+                if (visibleCount === 0) {
+                    emptyState.style.display = 'flex';
+                    if (query) {
+                        emptyStateMsg.innerText = `Tidak ada tools yang cocok dengan kata kunci "${query}".`;
+                    } else {
+                        emptyStateMsg.innerText = 'Tidak ada tools di kategori ini.';
+                    }
+                } else {
+                    emptyState.style.display = 'none';
+                }
+
+                if (currentCategory === 'all' && !query && countAllBadge) {
+                    countAllBadge.innerText = visibleCount;
+                }
+            }
+
+            // Category filter click
+            categoryChips.forEach(chip => {
+                chip.addEventListener('click', () => {
+                    categoryChips.forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    currentCategory = chip.getAttribute('data-category');
+                    filterTools();
+                });
+            });
+
+            // Search input listener
+            searchInput.addEventListener('input', filterTools);
+
+            // Reset button
+            btnReset.addEventListener('click', () => {
+                searchInput.value = '';
+                currentCategory = 'all';
+                categoryChips.forEach(c => c.classList.remove('active'));
+                const allChip = document.querySelector('.hub-chip[data-category="all"]');
+                if (allChip) allChip.classList.add('active');
+                filterTools();
+                searchInput.focus();
+            });
+
+            // Keyboard shortcut '/' to search
+            document.addEventListener('keydown', (e) => {
+                if (e.key === '/' && document.activeElement !== searchInput) {
+                    e.preventDefault();
+                    searchInput.focus();
+                    searchInput.select();
+                } else if (e.key === 'Escape' && document.activeElement === searchInput) {
+                    searchInput.blur();
+                }
+            });
+        });
+    </script>
     <script src="sidebar.js"></script>
 </body>
 </html>

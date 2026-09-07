@@ -9,6 +9,10 @@ document.addEventListener("DOMContentLoaded", () => {
     
     <nav class="menu">
         <a href="index.html" class="menu-item">
+            <span class="material-symbols-outlined icon">space_dashboard</span>
+            <span class="text">Beranda</span>
+        </a>
+        <a href="kalkulasi-masa-kerja.html" class="menu-item">
             <span class="material-symbols-outlined icon">calculate</span>
             <span class="text">Kalkulasi Masa Kerja</span>
         </a>

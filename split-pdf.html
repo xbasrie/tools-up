@@ -102,6 +102,83 @@
             border-color: var(--accent);
             box-shadow: 0 0 0 2px rgba(0, 229, 255, 0.2);
         }
+        
+        /* Custom Names Option Styles */
+        .custom-checkbox-container {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-top: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        .custom-checkbox-container:hover {
+            border-color: rgba(0, 229, 255, 0.2);
+        }
+        .custom-checkbox-label {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.85rem;
+            cursor: pointer;
+            user-select: none;
+        }
+        .custom-checkbox-label input[type="checkbox"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 1.35rem;
+            height: 1.35rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.3);
+            display: grid;
+            place-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 0.15rem;
+            flex-shrink: 0;
+        }
+        .custom-checkbox-label input[type="checkbox"]::before {
+            content: "";
+            width: 0.75em;
+            height: 0.75em;
+            transform: scale(0);
+            transition: 120ms transform ease-in-out;
+            box-shadow: inset 1em 1em white;
+            background-color: white;
+            transform-origin: center;
+            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+        }
+        .custom-checkbox-label input[type="checkbox"]:checked {
+            background-color: var(--accent, #00e5ff);
+            border-color: var(--accent, #00e5ff);
+        }
+        .custom-checkbox-label input[type="checkbox"]:checked::before {
+            transform: scale(1);
+            box-shadow: inset 1em 1em #0f172a;
+            background-color: #0f172a;
+        }
+        .form-input-custom {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--text, #f8fafc);
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+        .form-input-custom:focus {
+            outline: none;
+            border-color: var(--accent, #00e5ff);
+            box-shadow: 0 0 0 2px rgba(0, 229, 255, 0.2);
+            background: rgba(0, 0, 0, 0.4);
+        }
+        @media (max-width: 768px) {
+            .custom-names-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -183,6 +260,68 @@
                             <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">Gunakan tanda koma (,) untuk memisahkan dan strip (-) untuk rentang.</p>
                         </div>
                         
+                        <!-- Opsi Centang: Split dengan Rentang Nama -->
+                        <div class="custom-checkbox-container">
+                            <label class="custom-checkbox-label" for="chkCustomNames">
+                                <input type="checkbox" id="chkCustomNames">
+                                <div>
+                                    <div style="font-weight: 600; font-size: 1.05rem; color: var(--text); display: flex; align-items: center; gap: 0.5rem;">
+                                        <span>Split dengan rentang nama</span>
+                                        <span style="font-size: 0.72rem; background: rgba(0, 229, 255, 0.15); color: var(--accent); padding: 0.15rem 0.5rem; border-radius: 6px; font-weight: 500;">Kustom Nama File</span>
+                                    </div>
+                                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+                                        Beri nama file hasil split secara otomatis berdasarkan <strong>Nama File</strong> + <strong>List Nama</strong> yang diinput.
+                                    </p>
+                                </div>
+                            </label>
+
+                            <!-- Area Kolom Nama File & List Nama (Terbuka saat dicentang) -->
+                            <div id="customNamesBox" style="display: none; margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+                                <div class="custom-names-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+                                    <!-- Kolom 1: Nama File -->
+                                    <div>
+                                        <label for="customFilePrefix" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.95rem; color: var(--text);">
+                                            Nama File
+                                        </label>
+                                        <input type="text" id="customFilePrefix" class="form-input-custom" placeholder="Contoh: SK CPNS - atau Berkas ">
+                                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.45rem; line-height: 1.4;">
+                                            Awalan nama file. Format output: <code style="color: var(--accent); background: rgba(0,229,255,0.1); padding: 0.1rem 0.35rem; border-radius: 4px;">nama file + list nama.pdf</code>
+                                        </p>
+                                    </div>
+
+                                    <!-- Kolom 2: List Nama -->
+                                    <div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                            <label for="customNameList" style="font-weight: 600; font-size: 0.95rem; color: var(--text);">
+                                                List Nama
+                                            </label>
+                                            <span id="nameCountBadge" style="font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 12px; background: rgba(0, 229, 255, 0.12); color: var(--accent); font-weight: 600; border: 1px solid rgba(0, 229, 255, 0.2);">
+                                                0 nama
+                                            </span>
+                                        </div>
+                                        <textarea id="customNameList" class="form-input-custom" rows="5" placeholder="andre&#10;ales&#10;alexander&#10;adrian" style="resize: vertical; font-family: inherit; line-height: 1.5;"></textarea>
+                                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.45rem; line-height: 1.4;">
+                                            Masukkan 1 nama per baris (bisa langsung copy & paste 1 kolom dari file Excel).
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Pratinjau Hasil Output File -->
+                                <div id="customNamePreviewBox" style="margin-top: 1.25rem; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(0, 229, 255, 0.25); border-radius: 10px; padding: 1rem; display: none;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--accent); font-size: 0.88rem; font-weight: 600;">
+                                            <span class="material-symbols-outlined" style="font-size: 1.2rem;">preview</span>
+                                            Pratinjau Hasil Output File:
+                                        </div>
+                                        <span id="previewMatchStatus" style="font-size: 0.75rem; color: var(--text-muted);"></span>
+                                    </div>
+                                    <div id="customNamePreviewList" style="max-height: 130px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.4rem; padding-right: 0.5rem;">
+                                        <!-- Live preview list di-render otomatis -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div style="margin-top: 2rem; display: flex; gap: 1rem;">
                             <button id="btnSplit" class="btn btn-primary" style="flex: 1; padding: 1rem; font-size: 1.1rem;">
                                 <span class="material-symbols-outlined">cut</span> Eksekusi PDF
@@ -233,6 +372,16 @@
                 const pagesPreviewContainer = document.getElementById('pagesPreviewContainer');
                 const rangeInputContainer = document.getElementById('rangeInputContainer');
                 const rangeInput = document.getElementById('rangeInput');
+                
+                // Custom Names Split Elements
+                const chkCustomNames = document.getElementById('chkCustomNames');
+                const customNamesBox = document.getElementById('customNamesBox');
+                const customFilePrefix = document.getElementById('customFilePrefix');
+                const customNameList = document.getElementById('customNameList');
+                const nameCountBadge = document.getElementById('nameCountBadge');
+                const customNamePreviewBox = document.getElementById('customNamePreviewBox');
+                const customNamePreviewList = document.getElementById('customNamePreviewList');
+                const previewMatchStatus = document.getElementById('previewMatchStatus');
                 
                 const btnSplit = document.getElementById('btnSplit');
                 const btnCancel = document.getElementById('btnCancel');
@@ -364,8 +513,171 @@
                         } else {
                             rangeInputContainer.style.display = 'none';
                         }
+                        updateCustomNamePreview();
                     });
                 });
+
+                // Toggle Opsi Centang "Split dengan Rentang Nama"
+                chkCustomNames.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        customNamesBox.style.display = 'block';
+                        // Jika mode saat ini Ekstrak & Gabung, alihkan ke Pisah per Rentang agar sesuai tujuan memecah file
+                        const currentMode = document.querySelector('input[name="splitMode"]:checked')?.value;
+                        if (currentMode === 'range_merge') {
+                            const rangeSplitRadio = document.querySelector('input[name="splitMode"][value="range_split"]');
+                            if (rangeSplitRadio) {
+                                rangeSplitRadio.checked = true;
+                                rangeInputContainer.style.display = 'block';
+                            }
+                        }
+                    } else {
+                        customNamesBox.style.display = 'none';
+                    }
+                    updateCustomNamePreview();
+                });
+
+                // Event Listeners untuk Input Nama & Rentang
+                customFilePrefix.addEventListener('input', updateCustomNamePreview);
+                customNameList.addEventListener('input', updateCustomNamePreview);
+                rangeInput.addEventListener('input', updateCustomNamePreview);
+
+                // Helper: Ambil list nama dari textarea (1 nama per baris)
+                function getCustomNamesList() {
+                    if (!chkCustomNames.checked) return [];
+                    const text = customNameList.value.trim();
+                    if (!text) return [];
+                    return text
+                        .split(/\r?\n/)
+                        .map(line => line.trim())
+                        .filter(line => line.length > 0);
+                }
+
+                // Helper: Bangun nama file "nama file + list nama"
+                function buildCustomFilename(prefix, rawName, fallback) {
+                    const cleanName = (rawName || '').trim();
+                    if (!cleanName) return fallback;
+                    
+                    // Bersihkan karakter terlarang pada nama file sistem operasi: / \ : * ? " < > |
+                    const sanitize = (str) => str.replace(/[\/\\:*?"<>|]/g, '_');
+                    const sName = sanitize(cleanName).trim();
+                    let sPrefix = sanitize(prefix || '').replace(/^\s+/, ''); // hanya hapus spasi di awal
+                    
+                    let combined = '';
+                    if (sPrefix) {
+                        if (sPrefix.endsWith(' ') || sPrefix.endsWith('_')) {
+                            combined = `${sPrefix}${sName}`;
+                        } else if (sPrefix.endsWith('-')) {
+                            combined = `${sPrefix} ${sName}`;
+                        } else {
+                            combined = `${sPrefix} ${sName}`;
+                        }
+                    } else {
+                        combined = sName;
+                    }
+                    
+                    return combined.toLowerCase().endsWith('.pdf') ? combined : `${combined}.pdf`;
+                }
+
+                // Helper: Cegah duplikasi nama file di dalam ZIP (misal jika ada 2 orang bernama sama)
+                function getDeduplicatedFilename(filename, usedSet) {
+                    let finalName = filename;
+                    let counter = 2;
+                    const dotIdx = finalName.lastIndexOf('.');
+                    const base = dotIdx !== -1 ? finalName.substring(0, dotIdx) : finalName;
+                    const ext = dotIdx !== -1 ? finalName.substring(dotIdx) : '.pdf';
+                    
+                    while (usedSet.has(finalName.toLowerCase())) {
+                        finalName = `${base} (${counter})${ext}`;
+                        counter++;
+                    }
+                    usedSet.add(finalName.toLowerCase());
+                    return finalName;
+                }
+
+                // Helper: Update Pratinjau Nama File secara Real-time
+                function updateCustomNamePreview() {
+                    if (!chkCustomNames.checked) {
+                        customNamePreviewBox.style.display = 'none';
+                        return;
+                    }
+                    
+                    const names = getCustomNamesList();
+                    nameCountBadge.textContent = `${names.length} nama`;
+                    
+                    if (names.length === 0) {
+                        customNamePreviewBox.style.display = 'none';
+                        return;
+                    }
+                    
+                    customNamePreviewBox.style.display = 'block';
+                    const prefix = customFilePrefix.value;
+                    const mode = document.querySelector('input[name="splitMode"]:checked')?.value || 'range_split';
+                    
+                    let previewItems = [];
+                    if (mode === 'range_merge') {
+                        const sampleName = buildCustomFilename(prefix, names[0], 'extracted.pdf');
+                        previewItems.push(`<div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text);">
+                            <span class="material-symbols-outlined" style="font-size: 1.1rem; color: var(--accent);">picture_as_pdf</span>
+                            <span style="font-weight: 500;">${sampleName}</span>
+                            <span style="color: var(--text-muted); font-size: 0.75rem;">(1 file PDF gabungan)</span>
+                        </div>`);
+                        previewMatchStatus.textContent = names.length > 1 ? '⚠️ Mode ini menghasilkan 1 file' : '✓ 1 file';
+                        previewMatchStatus.style.color = names.length > 1 ? '#f59e0b' : '#10b981';
+                    } else if (mode === 'all') {
+                        const count = totalPages > 0 ? Math.min(totalPages, names.length) : names.length;
+                        const totalShow = Math.min(count, 8);
+                        for (let i = 0; i < totalShow; i++) {
+                            const fname = buildCustomFilename(prefix, names[i], `page-${i + 1}.pdf`);
+                            previewItems.push(`<div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text);">
+                                <span class="material-symbols-outlined" style="font-size: 1.1rem; color: var(--accent);">picture_as_pdf</span>
+                                <span style="font-weight: 500;">${fname}</span>
+                                <span style="color: var(--text-muted); font-size: 0.75rem;">(Halaman ${i + 1})</span>
+                            </div>`);
+                        }
+                        if (count > 8) {
+                            previewItems.push(`<div style="color: var(--text-muted); font-size: 0.8rem; font-style: italic; padding-left: 1.6rem;">... dan ${count - 8} file lainnya</div>`);
+                        }
+                        if (totalPages > 0) {
+                            previewMatchStatus.textContent = `${names.length} nama untuk ${totalPages} halaman`;
+                            previewMatchStatus.style.color = (names.length === totalPages) ? '#10b981' : '#94a3b8';
+                        } else {
+                            previewMatchStatus.textContent = `${names.length} nama terdeteksi`;
+                            previewMatchStatus.style.color = '#10b981';
+                        }
+                    } else { // range_split
+                        const ranges = parseMultipleRanges(rangeInput.value, totalPages || 9999);
+                        const count = Math.max(ranges.length, names.length);
+                        const totalShow = Math.min(count, 8);
+                        for (let i = 0; i < totalShow; i++) {
+                            const rangeName = ranges[i] ? ranges[i].name : `rentang-${i + 1}`;
+                            const nameItem = names[i] || rangeName;
+                            const fname = buildCustomFilename(prefix, nameItem, `range-${rangeName}.pdf`);
+                            const rangeBadge = ranges[i] ? `(Halaman ${ranges[i].name})` : `<span style="color:#f59e0b;">(Belum ada rentang)</span>`;
+                            previewItems.push(`<div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text);">
+                                <span class="material-symbols-outlined" style="font-size: 1.1rem; color: var(--accent);">picture_as_pdf</span>
+                                <span style="font-weight: 500;">${fname}</span>
+                                <span style="color: var(--text-muted); font-size: 0.75rem;">${rangeBadge}</span>
+                            </div>`);
+                        }
+                        if (count > 8) {
+                            previewItems.push(`<div style="color: var(--text-muted); font-size: 0.8rem; font-style: italic; padding-left: 1.6rem;">... dan ${count - 8} file lainnya</div>`);
+                        }
+                        if (ranges.length > 0) {
+                            if (ranges.length === names.length) {
+                                previewMatchStatus.textContent = `✓ Sesuai (${names.length} nama = ${ranges.length} rentang)`;
+                                previewMatchStatus.style.color = '#10b981';
+                            } else {
+                                previewMatchStatus.textContent = `ℹ️ ${names.length} nama vs ${ranges.length} rentang`;
+                                previewMatchStatus.style.color = '#f59e0b';
+                            }
+                        } else {
+                            previewMatchStatus.textContent = `${names.length} nama diinput`;
+                            previewMatchStatus.style.color = '#94a3b8';
+                        }
+                    }
+                    
+                    customNamePreviewList.innerHTML = previewItems.join('');
+                }
 
                 // Cancel Button
                 btnCancel.addEventListener('click', resetUI);
@@ -387,6 +699,15 @@
                     pagesPreviewContainer.innerHTML = '';
                     mainProgress.style.display = 'none';
                     mainProgressFill.style.width = '0%';
+                    
+                    // Reset opsi custom names
+                    chkCustomNames.checked = false;
+                    customNamesBox.style.display = 'none';
+                    customFilePrefix.value = '';
+                    customNameList.value = '';
+                    nameCountBadge.textContent = '0 nama';
+                    customNamePreviewBox.style.display = 'none';
+                    customNamePreviewList.innerHTML = '';
                 }
 
                 // Parse Multiple Ranges for splitting. e.g. "1-3, 5, 8-10"
@@ -434,14 +755,31 @@
                     if (!currentFile) return;
                     
                     const mode = document.querySelector('input[name="splitMode"]:checked').value;
+                    const isCustom = chkCustomNames.checked;
+                    const customNames = getCustomNamesList();
+                    const prefix = customFilePrefix.value;
+
+                    if (isCustom && customNames.length === 0) {
+                        alert('Silakan masukkan minimal 1 nama pada kolom List Nama, atau hilangkan centang "Split dengan rentang nama".');
+                        customNameList.focus();
+                        return;
+                    }
+
                     let pageIndices = [];
                     
                     if (mode === 'range_merge' || mode === 'range_split') {
+                        // Jika dalam mode range_split dan rentang belum diisi, namun jumlah nama sama persis dengan total halaman:
+                        // Otomatis asumsikan 1 halaman per nama (1, 2, 3, ...)
+                        if (mode === 'range_split' && !rangeInput.value.trim() && isCustom && customNames.length === totalPages) {
+                            rangeInput.value = Array.from({ length: totalPages }, (_, i) => `${i + 1}`).join(', ');
+                        }
+
                         const rangeText = rangeInput.value;
                         const ranges = parseMultipleRanges(rangeText, totalPages);
                         
                         if (ranges.length === 0) {
-                            alert(`Format rentang salah. Masukkan rentang yang valid antara 1 sampai ${totalPages}.`);
+                            alert(`Format rentang salah. Masukkan rentang yang valid antara 1 sampai ${totalPages} (contoh: 1-2, 3-5).`);
+                            rangeInput.focus();
                             return;
                         }
                         
@@ -478,11 +816,16 @@
                             const blob = new Blob([pdfBytes], { type: 'application/pdf' });
                             
                             mainProgressFill.style.width = '100%';
-                            setupDownload(blob, `extracted-${currentFile.name}`);
+                            let outputFilename = `extracted-${currentFile.name}`;
+                            if (isCustom && customNames.length > 0) {
+                                outputFilename = buildCustomFilename(prefix, customNames[0], outputFilename);
+                            }
+                            setupDownload(blob, outputFilename);
                             
                         } else if (mode === 'range_split') {
                             const zip = new JSZip();
                             const ranges = pageIndices;
+                            const usedFilenames = new Set();
                             
                             for (let i = 0; i < ranges.length; i++) {
                                 const rangeObj = ranges[i];
@@ -491,7 +834,14 @@
                                 copiedPages.forEach(page => newPdf.addPage(page));
                                 
                                 const pdfBytes = await newPdf.save();
-                                zip.file(`range-${rangeObj.name}.pdf`, pdfBytes);
+                                
+                                let filename = `range-${rangeObj.name}.pdf`;
+                                if (isCustom && customNames[i]) {
+                                    filename = buildCustomFilename(prefix, customNames[i], filename);
+                                }
+                                filename = getDeduplicatedFilename(filename, usedFilenames);
+
+                                zip.file(filename, pdfBytes);
                                 
                                 mainProgressFill.style.width = Math.floor(10 + ((i / ranges.length) * 80)) + '%';
                                 await new Promise(resolve => setTimeout(resolve, 0));
@@ -501,10 +851,16 @@
                             const zipBlob = await zip.generateAsync({ type: "blob" });
                             
                             mainProgressFill.style.width = '100%';
-                            setupDownload(zipBlob, `split-ranges-${currentFile.name.replace(/\.pdf$/i, '')}.zip`);
+                            let zipFilename = `split-ranges-${currentFile.name.replace(/\.pdf$/i, '')}.zip`;
+                            if (isCustom && prefix.trim()) {
+                                const cleanPrefix = prefix.trim().replace(/[\/\\:*?"<>|]/g, '_').replace(/[\s\-_]+$/, '');
+                                if (cleanPrefix) zipFilename = `${cleanPrefix}.zip`;
+                            }
+                            setupDownload(zipBlob, zipFilename);
 
                         } else if (mode === 'all') {
                             const zip = new JSZip();
+                            const usedFilenames = new Set();
                             
                             for (let i = 0; i < totalPages; i++) {
                                 const newPdf = await PDFDocument.create();
@@ -512,7 +868,14 @@
                                 newPdf.addPage(copiedPage);
                                 
                                 const pdfBytes = await newPdf.save();
-                                zip.file(`page-${i + 1}.pdf`, pdfBytes);
+                                
+                                let filename = `page-${i + 1}.pdf`;
+                                if (isCustom && customNames[i]) {
+                                    filename = buildCustomFilename(prefix, customNames[i], filename);
+                                }
+                                filename = getDeduplicatedFilename(filename, usedFilenames);
+
+                                zip.file(filename, pdfBytes);
                                 
                                 mainProgressFill.style.width = Math.floor(10 + ((i / totalPages) * 80)) + '%';
                                 
@@ -524,7 +887,12 @@
                             const zipBlob = await zip.generateAsync({ type: "blob" });
                             
                             mainProgressFill.style.width = '100%';
-                            setupDownload(zipBlob, `split-${currentFile.name.replace('.pdf', '')}.zip`);
+                            let zipFilename = `split-${currentFile.name.replace('.pdf', '')}.zip`;
+                            if (isCustom && prefix.trim()) {
+                                const cleanPrefix = prefix.trim().replace(/[\/\\:*?"<>|]/g, '_').replace(/[\s\-_]+$/, '');
+                                if (cleanPrefix) zipFilename = `${cleanPrefix}.zip`;
+                            }
+                            setupDownload(zipBlob, zipFilename);
                         }
                         
                     } catch (error) {

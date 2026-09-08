@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tools Kepegawaian - Convert PDF to Word</title>
+    <meta name="description" content="Ubah dokumen PDF ke Microsoft Word (.docx) secara instan, aman, dan gratis. Mendukung konversi satuan dan kolektif (bulk), drag and drop, serta deteksi scan otomatis.">
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Material Symbols Outlined -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    
+    <!-- PDF.js for extraction & preview -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    
+    <!-- docx.js for client-side Word .docx creation -->
+    <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+    
+    <!-- JSZip for Bulk ZIP Download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* PDF to Word Custom Page Styles */
+        .upload-area {
+            border: 2px dashed rgba(59, 130, 246, 0.4);
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover {
+            border-color: var(--md-sys-color-primary);
+            background: rgba(59, 130, 246, 0.06);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.15);
+        }
+
+        .upload-area.dragover {
+            border-color: #00e5ff;
+            background: rgba(0, 229, 255, 0.1);
+            transform: scale(1.01);
+            box-shadow: 0 0 30px rgba(0, 229, 255, 0.3);
+        }
+
+        .upload-icon-wrapper {
+            width: 76px;
+            height: 76px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.3) 100%);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.25rem;
+            transition: transform 0.3s ease;
+        }
+
+        .upload-area:hover .upload-icon-wrapper {
+            transform: scale(1.08) rotate(-3deg);
+        }
+
+        .upload-icon-wrapper .material-symbols-outlined {
+            font-size: 2.8rem;
+            color: #60a5fa;
+        }
+
+        .upload-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--md-sys-color-on-surface);
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-subtitle {
+            font-size: 0.95rem;
+            color: var(--md-sys-color-on-surface-variant);
+            margin-bottom: 1.25rem;
+        }
+
+        .upload-badges {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .upload-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.85rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #cbd5e1;
+        }
+
+        .upload-badge .material-symbols-outlined {
+            font-size: 1rem;
+            color: #60a5fa;
+        }
+
+        /* Mode Selection Cards */
+        .mode-selection-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.25rem;
+            margin-top: 1.5rem;
+        }
+
+        .mode-option-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1.5px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 1.25rem;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .mode-option-card:hover {
+            border-color: rgba(96, 165, 250, 0.4);
+            background: rgba(30, 41, 59, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .mode-option-card.active {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.12);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+        }
+
+        .mode-option-card input[type="radio"] {
+            margin-top: 0.3rem;
+            accent-color: #3b82f6;
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+
+        .mode-card-content h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .mode-card-content p {
+            font-size: 0.82rem;
+            color: var(--md-sys-color-on-surface-variant);
+            line-height: 1.4;
+        }
+
+        .mode-pill-rec {
+            font-size: 0.7rem;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        /* File List & Queue */
+        .queue-container {
+            margin-top: 2rem;
+            display: none;
+        }
+
+        .queue-header-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding: 1.25rem 1.5rem;
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            margin-bottom: 1.25rem;
+        }
+
+        .queue-title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .queue-badge-count {
+            background: var(--md-sys-color-primary);
+            color: white;
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 0.2rem 0.65rem;
+            border-radius: 12px;
+        }
+
+        .queue-actions-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-modern {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1.25rem;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            border: none;
+            text-decoration: none;
+        }
+
+        .btn-modern.primary {
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            color: white;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-modern.primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
+        }
+
+        .btn-modern.success {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: white;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+        }
+
+        .btn-modern.success:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+        }
+
+        .btn-modern.outline {
+            background: rgba(255, 255, 255, 0.05);
+            color: #e2e8f0;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-modern.outline:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-modern.danger-outline {
+            background: rgba(239, 68, 68, 0.1);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-modern.danger-outline:hover:not(:disabled) {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-modern:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        /* Overall Progress Banner */
+        .overall-progress-bar-wrap {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.25rem;
+            display: none;
+        }
+
+        .progress-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.88rem;
+            margin-bottom: 0.6rem;
+            color: #e2e8f0;
+        }
+
+        .progress-track {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6 0%, #00e5ff 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 8px;
+        }
+
+        /* File Item Card */
+        .file-items-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
+
+        .file-card-row {
+            background: rgba(15, 23, 42, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.25rem;
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-card-row:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            background: rgba(30, 41, 59, 0.5);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+        }
+
+        .file-card-row.completed {
+            border-color: rgba(16, 185, 129, 0.4);
+            background: rgba(16, 185, 129, 0.04);
+        }
+
+        .file-card-row.processing {
+            border-color: rgba(59, 130, 246, 0.5);
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .file-card-row.error {
+            border-color: rgba(239, 68, 68, 0.4);
+            background: rgba(239, 68, 68, 0.05);
+        }
+
+        .file-thumb-container {
+            width: 48px;
+            height: 64px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .file-thumb-container canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .file-info-main {
+            flex-grow: 1;
+            min-width: 0;
+        }
+
+        .file-name-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #f8fafc;
+            margin-bottom: 0.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-meta-tags {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            font-size: 0.8rem;
+            color: var(--md-sys-color-on-surface-variant);
+            flex-wrap: wrap;
+        }
+
+        .file-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-pill.pending {
+            background: rgba(148, 163, 184, 0.15);
+            color: #94a3b8;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+        }
+
+        .status-pill.processing {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            animation: pulse-border 1.5s infinite;
+        }
+
+        .status-pill.success {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+
+        .status-pill.error {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+
+        @keyframes pulse-border {
+            0%, 100% { border-color: rgba(59, 130, 246, 0.4); }
+            50% { border-color: rgba(96, 165, 250, 0.9); }
+        }
+
+        .file-actions-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .btn-action-icon {
+            background: rgba(255, 255, 255, 0.05);
+            color: #cbd5e1;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 0.45rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-action-icon:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+        }
+
+        .btn-action-icon.btn-delete:hover {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-single-convert {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.35);
+            border-radius: 8px;
+            padding: 0.45rem 0.85rem;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-single-convert:hover {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-single-download {
+            background: rgba(16, 185, 129, 0.18);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            border-radius: 8px;
+            padding: 0.45rem 0.85rem;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-single-download:hover {
+            background: #10b981;
+            color: white;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .card-row-progress {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 4px;
+            margin-top: 0.6rem;
+            overflow: hidden;
+            display: none;
+        }
+
+        .card-row-progress-fill {
+            height: 100%;
+            background: #3b82f6;
+            width: 0%;
+            transition: width 0.2s ease;
+        }
+
+        /* Checkbox Options Row */
+        .extra-options-row {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 1.25rem;
+            flex-wrap: wrap;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .custom-checkbox-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .custom-checkbox-label input[type="checkbox"] {
+            accent-color: #3b82f6;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        /* Toast Container */
+        .toast-notify {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #1e293b;
+            color: white;
+            padding: 1rem 1.4rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            z-index: 9999;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .toast-notify.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast-notify.success {
+            border-color: rgba(16, 185, 129, 0.5);
+        }
+
+        .toast-notify.success .toast-icon {
+            color: #34d399;
+        }
+
+        .toast-notify.info .toast-icon {
+            color: #60a5fa;
+        }
+
+        .toast-notify.error {
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+
+        .toast-notify.error .toast-icon {
+            color: #f87171;
+        }
+
+        @media (max-width: 768px) {
+            .file-card-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .file-actions-wrap {
+                width: 100%;
+                justify-content: flex-end;
+                margin-top: 0.5rem;
+            }
+            .queue-header-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .queue-actions-group {
+                width: 100%;
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <div id="sidebar-container"></div>
+
+        <!-- Main Workspace -->
+        <main class="main-panel glass-panel">
+            <header class="top-bar">
+                <div class="page-title">
+                    <h1>Convert PDF to Word</h1>
+                    <p class="subtitle">Ubah berkas PDF menjadi dokumen Microsoft Word (.docx) siap edit. Mendukung konversi satuan, kolektif (bulk), dan drag & drop.</p>
+                </div>
+            </header>
+
+            <section class="content-area">
+                <!-- Main Processing Card -->
+                <div class="card glass-card full-width" style="padding: 2rem;">
+                    
+                    <!-- Drag & Drop Upload Zone -->
+                    <div class="upload-area" id="dropZone">
+                        <div class="upload-icon-wrapper">
+                            <span class="material-symbols-outlined">description</span>
+                        </div>
+                        <h3 class="upload-title" id="uploadTitle">Tarik & Lepaskan Berkas PDF ke Sini</h3>
+                        <p class="upload-subtitle" id="uploadSubtitle">atau klik di mana saja pada kotak ini untuk memilih berkas dari perangkat Anda</p>
+                        
+                        <div class="upload-badges">
+                            <span class="upload-badge">
+                                <span class="material-symbols-outlined">layers</span>
+                                Multi-file / Bulk Support
+                            </span>
+                            <span class="upload-badge">
+                                <span class="material-symbols-outlined">verified_user</span>
+                                100% Client-Side & Aman
+                            </span>
+                            <span class="upload-badge">
+                                <span class="material-symbols-outlined">edit_note</span>
+                                Hasil Format .DOCX
+                            </span>
+                            <span class="upload-badge">
+                                <span class="material-symbols-outlined">document_scanner</span>
+                                Auto-Fallback Scan
+                            </span>
+                        </div>
+                        
+                        <input type="file" id="pdfFileInput" accept="application/pdf" multiple style="display: none;">
+                    </div>
+
+                    <!-- Configuration Options -->
+                    <div style="margin-top: 1.75rem;">
+                        <h4 style="font-size: 0.95rem; font-weight: 600; color: #cbd5e1; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span class="material-symbols-outlined" style="font-size: 1.15rem; color: #60a5fa;">tune</span>
+                            Metode & Preferensi Konversi
+                        </h4>
+
+                        <div class="mode-selection-grid">
+                            <!-- Option 1: Smart Auto -->
+                            <label class="mode-option-card active" id="cardModeSmart">
+                                <input type="radio" name="convertMode" value="smart" checked>
+                                <div class="mode-card-content">
+                                    <h4>
+                                        Cerdas / Otomatis
+                                        <span class="mode-pill-rec">Rekomendasi</span>
+                                    </h4>
+                                    <p>Ekstraksi teks cerdas dengan deteksi otomatis. Jika halaman berupa scan atau gambar, otomatis disisipkan gambar beresolusi tinggi agar tidak kosong.</p>
+                                </div>
+                            </label>
+
+                            <!-- Option 2: Full Editable Text -->
+                            <label class="mode-option-card" id="cardModeText">
+                                <input type="radio" name="convertMode" value="text">
+                                <div class="mode-card-content">
+                                    <h4>Teks Terstruktur (Editable)</h4>
+                                    <p>Fokus mengekstrak seluruh teks, susunan baris, font tebal, dan paragraf menjadi teks murni yang bebas diedit penuh di Word.</p>
+                                </div>
+                            </label>
+
+                            <!-- Option 3: Visual Precision -->
+                            <label class="mode-option-card" id="cardModeVisual">
+                                <input type="radio" name="convertMode" value="visual">
+                                <div class="mode-card-content">
+                                    <h4>Presisi Visual (Dokumen Asli)</h4>
+                                    <p>Mempertahankan tata letak visual 100% persis asli termasuk cap/stempel dan tanda tangan basah dalam dokumen Word.</p>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Extra Checkbox Options -->
+                        <div class="extra-options-row">
+                            <label class="custom-checkbox-label">
+                                <input type="checkbox" id="chkPageBreak" checked>
+                                <span>Sisipkan Pemisah Halaman (Page Break) antar halaman PDF</span>
+                            </label>
+                            <label class="custom-checkbox-label">
+                                <input type="checkbox" id="chkPreserveSpacing" checked>
+                                <span>Pertahankan Spasi Baris Asli (Rapi untuk Kop Surat & SK)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- File Queue Container -->
+                    <div class="queue-container" id="queueContainer">
+                        
+                        <!-- Queue Header & Bulk Toolbar -->
+                        <div class="queue-header-bar">
+                            <div class="queue-title-wrap">
+                                <span class="material-symbols-outlined" style="color: #60a5fa; font-size: 1.5rem;">format_list_bulleted</span>
+                                <h3 style="font-size: 1.05rem; font-weight: 700;">Antrean Berkas PDF</h3>
+                                <span class="queue-badge-count" id="fileCountBadge">0 berkas</span>
+                            </div>
+
+                            <div class="queue-actions-group">
+                                <button type="button" class="btn-modern outline" id="btnAddMoreFiles" title="Tambahkan berkas PDF lainnya">
+                                    <span class="material-symbols-outlined">add_circle</span>
+                                    <span>Tambah Berkas</span>
+                                </button>
+                                
+                                <button type="button" class="btn-modern primary" id="btnConvertAll" title="Konversi semua berkas sekaligus">
+                                    <span class="material-symbols-outlined">bolt</span>
+                                    <span>Konversi Semua (Bulk)</span>
+                                </button>
+
+                                <button type="button" class="btn-modern success" id="btnDownloadAllZip" disabled title="Unduh seluruh file DOCX hasil konversi dalam satu arsip ZIP">
+                                    <span class="material-symbols-outlined">folder_zip</span>
+                                    <span>Unduh Semua (ZIP)</span>
+                                </button>
+
+                                <button type="button" class="btn-modern danger-outline" id="btnClearAll" title="Hapus semua antrean">
+                                    <span class="material-symbols-outlined">delete_sweep</span>
+                                    <span>Bersihkan</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Bulk Processing Progress Banner -->
+                        <div class="overall-progress-bar-wrap" id="overallProgressBarWrap">
+                            <div class="progress-meta">
+                                <span id="overallProgressText">Memproses konversi berkas massal...</span>
+                                <span id="overallProgressPercent" style="font-weight: 700; color: #3b82f6;">0%</span>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-fill" id="overallProgressFill"></div>
+                            </div>
+                        </div>
+
+                        <!-- Files List -->
+                        <div class="file-items-list" id="fileItemsList"></div>
+                    </div>
+
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Toast Notification Element -->
+    <div class="toast-notify" id="toastNotify">
+        <span class="material-symbols-outlined toast-icon" id="toastIcon">check_circle</span>
+        <span id="toastMessage">Pemberitahuan</span>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Setup PDF.js worker
+            if (window.pdfjsLib) {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+            }
+
+            // DOM Elements
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('pdfFileInput');
+            const queueContainer = document.getElementById('queueContainer');
+            const fileItemsList = document.getElementById('fileItemsList');
+            const fileCountBadge = document.getElementById('fileCountBadge');
+            const btnAddMoreFiles = document.getElementById('btnAddMoreFiles');
+            const btnConvertAll = document.getElementById('btnConvertAll');
+            const btnDownloadAllZip = document.getElementById('btnDownloadAllZip');
+            const btnClearAll = document.getElementById('btnClearAll');
+            const overallProgressBarWrap = document.getElementById('overallProgressBarWrap');
+            const overallProgressFill = document.getElementById('overallProgressFill');
+            const overallProgressText = document.getElementById('overallProgressText');
+            const overallProgressPercent = document.getElementById('overallProgressPercent');
+            const chkPageBreak = document.getElementById('chkPageBreak');
+            const chkPreserveSpacing = document.getElementById('chkPreserveSpacing');
+
+            // Radio Mode Cards Visual Binding
+            const modeCards = document.querySelectorAll('.mode-option-card');
+            modeCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    modeCards.forEach(c => c.classList.remove('active'));
+                    card.classList.add('active');
+                    const radio = card.querySelector('input[type="radio"]');
+                    if (radio) radio.checked = true;
+                });
+            });
+
+            // Queue Data Store
+            let filesQueue = [];
+            let isConvertingBulk = false;
+
+            // Toast Helper
+            function showToast(message, type = 'success') {
+                const toast = document.getElementById('toastNotify');
+                const toastMsg = document.getElementById('toastMessage');
+                const toastIcon = document.getElementById('toastIcon');
+
+                toast.className = `toast-notify show ${type}`;
+                toastMsg.innerText = message;
+
+                if (type === 'success') toastIcon.innerText = 'check_circle';
+                else if (type === 'error') toastIcon.innerText = 'error';
+                else toastIcon.innerText = 'info';
+
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 3500);
+            }
+
+            // Format bytes helper
+            function formatBytes(bytes, decimals = 1) {
+                if (bytes === 0) return '0 B';
+                const k = 1024;
+                const dm = decimals < 0 ? 0 : decimals;
+                const sizes = ['B', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+            }
+
+            // Drag and Drop Event Listeners
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropZone.classList.add('dragover');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropZone.classList.remove('dragover');
+                }, false);
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                if (dt && dt.files && dt.files.length > 0) {
+                    handleIncomingFiles(dt.files);
+                }
+            });
+
+            // Also allow dragging files directly anywhere into queue area
+            window.addEventListener('dragover', (e) => e.preventDefault());
+            window.addEventListener('drop', (e) => {
+                if (e.target !== dropZone && !dropZone.contains(e.target) && e.dataTransfer.files.length > 0) {
+                    e.preventDefault();
+                    handleIncomingFiles(e.dataTransfer.files);
+                }
+            });
+
+            dropZone.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            btnAddMoreFiles.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    handleIncomingFiles(e.target.files);
+                    fileInput.value = ''; // Reset input
+                }
+            });
+
+            // Handle Incoming Files
+            async function handleIncomingFiles(fileList) {
+                const incoming = Array.from(fileList).filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+                
+                if (incoming.length === 0) {
+                    showToast('Harap pilih berkas berekstensi .PDF yang valid.', 'error');
+                    return;
+                }
+
+                if (incoming.length < fileList.length) {
+                    showToast('Beberapa berkas dilewati karena bukan berkas PDF.', 'info');
+                }
+
+                for (const file of incoming) {
+                    // Check duplicate
+                    const isDuplicate = filesQueue.some(item => item.file.name === file.name && item.file.size === file.size);
+                    if (isDuplicate) continue;
+
+                    const item = {
+                        id: 'pdf_' + Math.random().toString(36).substr(2, 9),
+                        file: file,
+                        totalPages: '...',
+                        status: 'pending', // pending, processing, completed, error
+                        progressText: '',
+                        progressPercent: 0,
+                        docxBlob: null,
+                        docxUrl: null,
+                        docxSize: 0,
+                        errorMsg: '',
+                        thumbDataUrl: null
+                    };
+
+                    filesQueue.push(item);
+                }
+
+                renderQueue();
+                updateZipButtonState();
+
+                // Generate thumbnails & read page count in background
+                loadPDFMetadata();
+            }
+
+            // Read metadata and render 1st page thumbnail
+            async function loadPDFMetadata() {
+                for (const item of filesQueue) {
+                    if (item.totalPages !== '...' && item.thumbDataUrl) continue;
+
+                    try {
+                        const arrayBuffer = await item.file.arrayBuffer();
+                        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                        item.totalPages = pdf.numPages;
+
+                        // Render first page thumbnail
+                        const page = await pdf.getPage(1);
+                        const viewport = page.getViewport({ scale: 0.25 });
+                        const canvas = document.createElement('canvas');
+                        canvas.width = viewport.width;
+                        canvas.height = viewport.height;
+                        const ctx = canvas.getContext('2d');
+
+                        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                        item.thumbDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+                        updateFileCardDOM(item);
+                    } catch (err) {
+                        console.warn('Metadata error for file:', item.file.name, err);
+                        item.totalPages = 1;
+                        updateFileCardDOM(item);
+                    }
+                }
+            }
+
+            // Render Queue List
+            function renderQueue() {
+                if (filesQueue.length === 0) {
+                    queueContainer.style.display = 'none';
+                    return;
+                }
+
+                queueContainer.style.display = 'block';
+                fileCountBadge.innerText = `${filesQueue.length} berkas`;
+                fileItemsList.innerHTML = '';
+
+                filesQueue.forEach(item => {
+                    const card = createFileCardElement(item);
+                    fileItemsList.appendChild(card);
+                });
+            }
+
+            // Create File Card Element
+            function createFileCardElement(item) {
+                const card = document.createElement('div');
+                card.className = `file-card-row ${item.status}`;
+                card.id = `card_${item.id}`;
+
+                const thumbHtml = item.thumbDataUrl 
+                    ? `<img src="${item.thumbDataUrl}" alt="Thumbnail" style="width:100%;height:100%;object-fit:cover;">`
+                    : `<span class="material-symbols-outlined" style="color: #60a5fa; font-size: 1.8rem;">picture_as_pdf</span>`;
+
+                let statusBadgeHtml = '';
+                if (item.status === 'pending') {
+                    statusBadgeHtml = `<span class="status-pill pending"><span class="material-symbols-outlined" style="font-size:1rem;">hourglass_empty</span> Siap Konversi</span>`;
+                } else if (item.status === 'processing') {
+                    statusBadgeHtml = `<span class="status-pill processing"><span class="material-symbols-outlined" style="font-size:1rem;">autorenew</span> ${item.progressText || 'Mengonversi...'}</span>`;
+                } else if (item.status === 'completed') {
+                    statusBadgeHtml = `<span class="status-pill success"><span class="material-symbols-outlined" style="font-size:1rem;">check_circle</span> Selesai (${formatBytes(item.docxSize)})</span>`;
+                } else if (item.status === 'error') {
+                    statusBadgeHtml = `<span class="status-pill error" title="${item.errorMsg}"><span class="material-symbols-outlined" style="font-size:1rem;">error</span> Gagal</span>`;
+                }
+
+                let actionButtonsHtml = '';
+                if (item.status === 'completed') {
+                    const cleanName = item.file.name.replace(/\.[^/.]+$/, "") + ".docx";
+                    actionButtonsHtml = `
+                        <a href="${item.docxUrl}" download="${cleanName}" class="btn-single-download" title="Unduh file Word .docx">
+                            <span class="material-symbols-outlined" style="font-size: 1.1rem;">download</span>
+                            <span>Unduh .DOCX</span>
+                        </a>
+                        <button type="button" class="btn-action-icon btn-delete" onclick="window.removeQueueItem('${item.id}')" title="Hapus dari antrean">
+                            <span class="material-symbols-outlined" style="font-size: 1.2rem;">delete</span>
+                        </button>
+                    `;
+                } else {
+                    actionButtonsHtml = `
+                        <button type="button" class="btn-single-convert" onclick="window.convertSingleItem('${item.id}')" ${item.status === 'processing' ? 'disabled' : ''} title="Konversi file ini">
+                            <span class="material-symbols-outlined" style="font-size: 1.1rem;">play_arrow</span>
+                            <span>Konversi</span>
+                        </button>
+                        <button type="button" class="btn-action-icon btn-delete" onclick="window.removeQueueItem('${item.id}')" title="Hapus dari antrean">
+                            <span class="material-symbols-outlined" style="font-size: 1.2rem;">delete</span>
+                        </button>
+                    `;
+                }
+
+                const progressBarDisplay = item.status === 'processing' ? 'block' : 'none';
+
+                card.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 1rem; width: 100%; min-width: 0;">
+                        <div class="file-thumb-container" id="thumb_${item.id}">
+                            ${thumbHtml}
+                        </div>
+                        <div class="file-info-main">
+                            <div class="file-name-title" title="${item.file.name}">${item.file.name}</div>
+                            <div class="file-meta-tags">
+                                <span class="file-meta-item">
+                                    <span class="material-symbols-outlined" style="font-size: 0.95rem;">straighten</span>
+                                    ${formatBytes(item.file.size)}
+                                </span>
+                                <span class="file-meta-item">
+                                    <span class="material-symbols-outlined" style="font-size: 0.95rem;">auto_stories</span>
+                                    ${item.totalPages} Halaman
+                                </span>
+                                <span id="status_container_${item.id}">
+                                    ${statusBadgeHtml}
+                                </span>
+                            </div>
+                            <div class="card-row-progress" id="row_progress_${item.id}" style="display: ${progressBarDisplay};">
+                                <div class="card-row-progress-fill" id="row_fill_${item.id}" style="width: ${item.progressPercent}%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="file-actions-wrap" id="actions_${item.id}">
+                        ${actionButtonsHtml}
+                    </div>
+                `;
+
+                return card;
+            }
+
+            // Update specific card in DOM without re-rendering entire queue
+            function updateFileCardDOM(item) {
+                const card = document.getElementById(`card_${item.id}`);
+                if (!card) return;
+
+                card.className = `file-card-row ${item.status}`;
+
+                // Update thumbnail if available
+                const thumbElem = document.getElementById(`thumb_${item.id}`);
+                if (thumbElem && item.thumbDataUrl && !thumbElem.querySelector('img')) {
+                    thumbElem.innerHTML = `<img src="${item.thumbDataUrl}" alt="Thumbnail" style="width:100%;height:100%;object-fit:cover;">`;
+                }
+
+                // Update status badge
+                const statusContainer = document.getElementById(`status_container_${item.id}`);
+                if (statusContainer) {
+                    if (item.status === 'pending') {
+                        statusContainer.innerHTML = `<span class="status-pill pending"><span class="material-symbols-outlined" style="font-size:1rem;">hourglass_empty</span> Siap Konversi</span>`;
+                    } else if (item.status === 'processing') {
+                        statusContainer.innerHTML = `<span class="status-pill processing"><span class="material-symbols-outlined" style="font-size:1rem;">autorenew</span> ${item.progressText || 'Mengonversi...'}</span>`;
+                    } else if (item.status === 'completed') {
+                        statusContainer.innerHTML = `<span class="status-pill success"><span class="material-symbols-outlined" style="font-size:1rem;">check_circle</span> Selesai (${formatBytes(item.docxSize)})</span>`;
+                    } else if (item.status === 'error') {
+                        statusContainer.innerHTML = `<span class="status-pill error" title="${item.errorMsg}"><span class="material-symbols-outlined" style="font-size:1rem;">error</span> Gagal</span>`;
+                    }
+                }
+
+                // Update progress bar
+                const rowProgress = document.getElementById(`row_progress_${item.id}`);
+                const rowFill = document.getElementById(`row_fill_${item.id}`);
+                if (rowProgress && rowFill) {
+                    rowProgress.style.display = item.status === 'processing' ? 'block' : 'none';
+                    rowFill.style.width = `${item.progressPercent}%`;
+                }
+
+                // Update actions buttons
+                const actionsWrap = document.getElementById(`actions_${item.id}`);
+                if (actionsWrap) {
+                    if (item.status === 'completed') {
+                        const cleanName = item.file.name.replace(/\.[^/.]+$/, "") + ".docx";
+                        actionsWrap.innerHTML = `
+                            <a href="${item.docxUrl}" download="${cleanName}" class="btn-single-download" title="Unduh file Word .docx">
+                                <span class="material-symbols-outlined" style="font-size: 1.1rem;">download</span>
+                                <span>Unduh .DOCX</span>
+                            </a>
+                            <button type="button" class="btn-action-icon btn-delete" onclick="window.removeQueueItem('${item.id}')" title="Hapus dari antrean">
+                                <span class="material-symbols-outlined" style="font-size: 1.2rem;">delete</span>
+                            </button>
+                        `;
+                    } else {
+                        actionsWrap.innerHTML = `
+                            <button type="button" class="btn-single-convert" onclick="window.convertSingleItem('${item.id}')" ${item.status === 'processing' ? 'disabled' : ''} title="Konversi file ini">
+                                <span class="material-symbols-outlined" style="font-size: 1.1rem;">play_arrow</span>
+                                <span>Konversi</span>
+                            </button>
+                            <button type="button" class="btn-action-icon btn-delete" onclick="window.removeQueueItem('${item.id}')" title="Hapus dari antrean">
+                                <span class="material-symbols-outlined" style="font-size: 1.2rem;">delete</span>
+                            </button>
+                        `;
+                    }
+                }
+            }
+
+            // Expose globally for inline onclick
+            window.removeQueueItem = function(id) {
+                const idx = filesQueue.findIndex(f => f.id === id);
+                if (idx !== -1) {
+                    if (filesQueue[idx].docxUrl) {
+                        URL.revokeObjectURL(filesQueue[idx].docxUrl);
+                    }
+                    filesQueue.splice(idx, 1);
+                    renderQueue();
+                    updateZipButtonState();
+                }
+            };
+
+            window.convertSingleItem = async function(id) {
+                const item = filesQueue.find(f => f.id === id);
+                if (!item || item.status === 'processing') return;
+
+                await processFileConversion(item);
+                updateZipButtonState();
+            };
+
+            // Clear All Queue
+            btnClearAll.addEventListener('click', () => {
+                if (isConvertingBulk) return;
+                filesQueue.forEach(item => {
+                    if (item.docxUrl) URL.revokeObjectURL(item.docxUrl);
+                });
+                filesQueue = [];
+                renderQueue();
+                updateZipButtonState();
+                showToast('Antrean berhasil dibersihkan.', 'info');
+            });
+
+            // Update ZIP Button availability
+            function updateZipButtonState() {
+                const completedCount = filesQueue.filter(f => f.status === 'completed').length;
+                btnDownloadAllZip.disabled = completedCount === 0;
+            }
+
+            // CORE CONVERSION ENGINE: Convert PDF to DOCX
+            async function processFileConversion(item) {
+                if (!window.docx) {
+                    showToast('Pustaka docx.js belum siap dimuat.', 'error');
+                    return;
+                }
+
+                item.status = 'processing';
+                item.progressText = 'Membaca dokumen PDF...';
+                item.progressPercent = 10;
+                updateFileCardDOM(item);
+
+                const { Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak, ImageRun } = window.docx;
+                const mode = document.querySelector('input[name="convertMode"]:checked')?.value || 'smart';
+                const addPageBreak = chkPageBreak.checked;
+                const preserveSpacing = chkPreserveSpacing.checked;
+
+                try {
+                    const arrayBuffer = await item.file.arrayBuffer();
+                    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                    const numPages = pdf.numPages;
+                    item.totalPages = numPages;
+
+                    const docChildren = [];
+
+                    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+                        item.progressText = `Memproses Halaman ${pageNum} / ${numPages}...`;
+                        item.progressPercent = Math.round(15 + (pageNum / numPages) * 75);
+                        updateFileCardDOM(item);
+
+                        const page = await pdf.getPage(pageNum);
+                        const viewport = page.getViewport({ scale: 1.5 });
+                        const textContent = await page.getTextContent();
+                        const rawItems = textContent.items || [];
+
+                        // Determine if page is scanned or text
+                        const totalChars = rawItems.reduce((acc, it) => acc + (it.str ? it.str.trim().length : 0), 0);
+                        const isScannedOrVisual = mode === 'visual' || (mode === 'smart' && totalChars < 25);
+
+                        if (isScannedOrVisual) {
+                            // Render page visual to high-res canvas
+                            const canvas = document.createElement('canvas');
+                            canvas.width = viewport.width;
+                            canvas.height = viewport.height;
+                            const ctx = canvas.getContext('2d');
+                            
+                            // Fill background white
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                            await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+                            const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+                            const imgBuffer = await blob.arrayBuffer();
+                            const imgUint8 = new Uint8Array(imgBuffer);
+
+                            // Calculate width to fit standard A4 margins (approx 520 points width)
+                            const docxImgWidth = 520;
+                            const docxImgHeight = Math.round(docxImgWidth * (viewport.height / viewport.width));
+
+                            docChildren.push(
+                                new Paragraph({
+                                    spacing: { before: 100, after: 100 },
+                                    children: [
+                                        new ImageRun({
+                                            data: imgUint8,
+                                            transformation: {
+                                                width: docxImgWidth,
+                                                height: docxImgHeight
+                                            }
+                                        })
+                                    ]
+                                })
+                            );
+                        } else {
+                            // Extract Structured Text
+                            // PDF coordinates: transform[4] is X, transform[5] is Y (Y is 0 at bottom)
+                            const processedItems = rawItems
+                                .filter(it => it.str && it.str.length > 0)
+                                .map(it => {
+                                    const fontSize = Math.round(Math.hypot(it.transform[0], it.transform[1]) || it.height || 11);
+                                    const fontName = (it.fontName || '').toLowerCase();
+                                    const isBold = fontName.includes('bold') || fontName.includes('black') || fontName.includes('heavy') || fontName.includes('b');
+                                    const isItalic = fontName.includes('italic') || fontName.includes('oblique');
+
+                                    return {
+                                        text: it.str,
+                                        x: it.transform[4],
+                                        y: it.transform[5],
+                                        width: it.width || 0,
+                                        fontSize: fontSize,
+                                        isBold: isBold,
+                                        isItalic: isItalic
+                                    };
+                                });
+
+                            // Sort by Y descending (top to bottom)
+                            processedItems.sort((a, b) => b.y - a.y);
+
+                            // Group into lines by Y proximity (tolerance ~4.5 points)
+                            const lines = [];
+                            let currentLine = [];
+                            let currentLineY = null;
+
+                            processedItems.forEach(item => {
+                                if (currentLineY === null) {
+                                    currentLineY = item.y;
+                                    currentLine.push(item);
+                                } else if (Math.abs(item.y - currentLineY) <= 4.5) {
+                                    currentLine.push(item);
+                                } else {
+                                    lines.push({ y: currentLineY, items: currentLine });
+                                    currentLine = [item];
+                                    currentLineY = item.y;
+                                }
+                            });
+                            if (currentLine.length > 0) {
+                                lines.push({ y: currentLineY, items: currentLine });
+                            }
+
+                            // Process lines into DOCX Paragraphs
+                            let currentParagraphChildren = [];
+                            let prevLineY = null;
+                            let avgLineGap = 16;
+
+                            lines.forEach((lineObj, lineIdx) => {
+                                // Sort line items from left to right (X ascending)
+                                lineObj.items.sort((a, b) => a.x - b.x);
+
+                                const lineGap = prevLineY !== null ? (prevLineY - lineObj.y) : null;
+                                prevLineY = lineObj.y;
+
+                                // If large gap detected and we have existing runs, close paragraph
+                                if (lineGap !== null && lineGap > avgLineGap * 1.8 && currentParagraphChildren.length > 0) {
+                                    docChildren.push(
+                                        new Paragraph({
+                                            spacing: { after: 160, line: 276 },
+                                            children: currentParagraphChildren
+                                        })
+                                    );
+                                    currentParagraphChildren = [];
+                                } else if (preserveSpacing && currentParagraphChildren.length > 0) {
+                                    // Add a line break run between lines inside paragraph
+                                    currentParagraphChildren.push(new TextRun({ break: 1 }));
+                                } else if (currentParagraphChildren.length > 0) {
+                                    currentParagraphChildren.push(new TextRun({ text: " " }));
+                                }
+
+                                // Build text runs for this line with spacing
+                                let prevItemEnd = null;
+                                lineObj.items.forEach(it => {
+                                    let spacePrefix = "";
+                                    if (prevItemEnd !== null && (it.x - prevItemEnd > 3.0) && !it.text.startsWith(' ')) {
+                                        spacePrefix = " ";
+                                    }
+                                    prevItemEnd = it.x + it.width;
+
+                                    // Word font size unit is half-points (e.g. 11pt = 22)
+                                    const wordSize = Math.max(16, Math.min(56, it.fontSize * 2));
+
+                                    currentParagraphChildren.push(
+                                        new TextRun({
+                                            text: spacePrefix + it.text,
+                                            bold: it.isBold,
+                                            italics: it.isItalic,
+                                            size: wordSize
+                                        })
+                                    );
+                                });
+                            });
+
+                            // Push any remaining paragraph
+                            if (currentParagraphChildren.length > 0) {
+                                docChildren.push(
+                                    new Paragraph({
+                                        spacing: { after: 160, line: 276 },
+                                        children: currentParagraphChildren
+                                    })
+                                );
+                            }
+                        }
+
+                        // Add Page Break if not the last page
+                        if (addPageBreak && pageNum < numPages) {
+                            docChildren.push(
+                                new Paragraph({
+                                    children: [new PageBreak()]
+                                })
+                            );
+                        }
+                    }
+
+                    // Build Document
+                    item.progressText = 'Menyusun berkas Word (.docx)...';
+                    item.progressPercent = 95;
+                    updateFileCardDOM(item);
+
+                    const doc = new Document({
+                        creator: 'Tools Kepegawaian Kemenag',
+                        title: item.file.name.replace(/\.[^/.]+$/, ""),
+                        description: 'Hasil konversi cerdas PDF ke DOCX',
+                        sections: [{
+                            properties: {
+                                page: {
+                                    margin: {
+                                        top: 1000,
+                                        right: 1000,
+                                        bottom: 1000,
+                                        left: 1000
+                                    }
+                                }
+                            },
+                            children: docChildren.length > 0 ? docChildren : [
+                                new Paragraph({
+                                    children: [new TextRun({ text: "Dokumen berhasil dikonversi tanpa teks terdeteksi." })]
+                                })
+                            ]
+                        }]
+                    });
+
+                    // Pack into Blob
+                    const docxBlob = await Packer.toBlob(doc);
+                    item.docxBlob = docxBlob;
+                    item.docxSize = docxBlob.size;
+                    item.docxUrl = URL.createObjectURL(docxBlob);
+                    item.status = 'completed';
+                    item.progressPercent = 100;
+                    item.progressText = 'Selesai';
+                    updateFileCardDOM(item);
+
+                } catch (err) {
+                    console.error('Conversion failed for file:', item.file.name, err);
+                    item.status = 'error';
+                    item.errorMsg = err.message || 'Terjadi kesalahan saat memproses file';
+                    updateFileCardDOM(item);
+                }
+            }
+
+            // BULK CONVERSION: Convert All Files
+            btnConvertAll.addEventListener('click', async () => {
+                if (isConvertingBulk) return;
+                const pendingFiles = filesQueue.filter(f => f.status === 'pending' || f.status === 'error');
+                
+                if (pendingFiles.length === 0) {
+                    showToast('Tidak ada berkas yang perlu dikonversi.', 'info');
+                    return;
+                }
+
+                isConvertingBulk = true;
+                btnConvertAll.disabled = true;
+                btnAddMoreFiles.disabled = true;
+                btnClearAll.disabled = true;
+
+                overallProgressBarWrap.style.display = 'block';
+                overallProgressFill.style.width = '0%';
+                overallProgressPercent.innerText = '0%';
+
+                const totalPending = pendingFiles.length;
+                let completedCount = 0;
+
+                for (let i = 0; i < totalPending; i++) {
+                    const item = pendingFiles[i];
+                    overallProgressText.innerText = `Mengonversi berkas ${i + 1} dari ${totalPending}: ${item.file.name}`;
+                    
+                    await processFileConversion(item);
+                    completedCount++;
+
+                    const percent = Math.round((completedCount / totalPending) * 100);
+                    overallProgressFill.style.width = `${percent}%`;
+                    overallProgressPercent.innerText = `${percent}%`;
+                    updateZipButtonState();
+                }
+
+                overallProgressText.innerText = `Semua berkas selesai diproses (${completedCount} berkas).`;
+                showToast(`Selesai mengonversi ${completedCount} berkas PDF ke Word!`, 'success');
+
+                isConvertingBulk = false;
+                btnConvertAll.disabled = false;
+                btnAddMoreFiles.disabled = false;
+                btnClearAll.disabled = false;
+
+                updateZipButtonState();
+            });
+
+            // BULK DOWNLOAD: Download All as ZIP
+            btnDownloadAllZip.addEventListener('click', async () => {
+                const completedItems = filesQueue.filter(f => f.status === 'completed' && f.docxBlob);
+                if (completedItems.length === 0) {
+                    showToast('Belum ada berkas hasil konversi untuk diunduh.', 'error');
+                    return;
+                }
+
+                if (!window.JSZip) {
+                    showToast('Pustaka JSZip belum siap.', 'error');
+                    return;
+                }
+
+                btnDownloadAllZip.disabled = true;
+                const originalText = btnDownloadAllZip.innerHTML;
+                btnDownloadAllZip.innerHTML = `<span class="material-symbols-outlined" style="animation: spin 1s infinite linear;">autorenew</span> Mengompres ZIP...`;
+
+                try {
+                    const zip = new JSZip();
+                    const folder = zip.folder("dokumen-word-hasil-konversi");
+
+                    completedItems.forEach(item => {
+                        const cleanName = item.file.name.replace(/\.[^/.]+$/, "") + ".docx";
+                        folder.file(cleanName, item.docxBlob);
+                    });
+
+                    const zipBlob = await zip.generateAsync({ type: "blob" });
+                    const zipUrl = URL.createObjectURL(zipBlob);
+
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = zipUrl;
+                    downloadLink.download = `koleksi-word-${Date.now()}.zip`;
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+
+                    setTimeout(() => URL.revokeObjectURL(zipUrl), 10000);
+                    showToast('Arsip ZIP berhasil diunduh!', 'success');
+
+                } catch (err) {
+                    console.error('Failed to create ZIP', err);
+                    showToast('Gagal membuat arsip ZIP: ' + err.message, 'error');
+                } finally {
+                    btnDownloadAllZip.disabled = false;
+                    btnDownloadAllZip.innerHTML = originalText;
+                }
+            });
+
+        });
+    </script>
+
+    <!-- Sidebar Initializer -->
+    <script src="sidebar.js"></script>
+</body>
+</html>

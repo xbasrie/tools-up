@@ -49,6 +49,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     <span class="material-symbols-outlined icon">vertical_split</span>
                     <span class="text">Split PDF</span>
                 </a>
+                <a href="pdf-to-word.html" class="menu-item">
+                    <span class="material-symbols-outlined icon">description</span>
+                    <span class="text">PDF ke Word</span>
+                </a>
             </div>
         </div>
     </nav>

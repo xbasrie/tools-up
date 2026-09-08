@@ -1223,6 +1223,12 @@
                 let name = fontName.replace(/^[A-Z]{6}\+/, '').trim();
                 const lower = name.toLowerCase();
 
+                // TCPDF uses dummy CIDFont names like /CIDFont+F1, /CIDFont+F2, etc.
+                // These are not real font names and should map to Arial (default Indonesian govt font)
+                if (lower.includes('cidfont') || /^cidfont/i.test(name) || /^g_d\d+_f\d+$/i.test(fontName)) {
+                    return 'Arial';
+                }
+
                 if (lower.includes('times') || lower.includes('roman') || lower.includes('cambria')) {
                     return 'Times New Roman';
                 }
@@ -1493,6 +1499,23 @@
 
                             const rawName = fontObj?.name || fontObj?.fallbackName || textContent.styles?.[fKey]?.fontFamily || '';
                             const lower = rawName.toLowerCase();
+
+                            // TCPDF bold detection: CIDFont+F2 is typically Bold in TCPDF
+                            // Pattern: F1=Regular, F2=Bold, F3=Italic, F4=BoldItalic
+                            let tcpdfBoldByNumber = false;
+                            let tcpdfItalicByNumber = false;
+                            if (/cidfont/i.test(rawName) || /cidfont/i.test(fKey) || /g_d\d+_f/i.test(fKey)) {
+                                // Extract font number from key pattern like g_d0_f2 or CIDFont+F2
+                                const fNumMatch = (fKey || '').match(/f(\d+)$/i) || (rawName || '').match(/F(\d+)$/i);
+                                if (fNumMatch) {
+                                    const fNum = parseInt(fNumMatch[1]);
+                                    // In TCPDF: even numbers (F2, F4) tend to be Bold
+                                    // F1=Regular, F2=Bold, F3=Italic, F4=BoldItalic
+                                    tcpdfBoldByNumber = (fNum === 2 || fNum === 4);
+                                    tcpdfItalicByNumber = (fNum === 3 || fNum === 4);
+                                }
+                            }
+
                             const isBold = fontObj?.bold === true ||
                                            fontObj?.weight === 'bold' ||
                                            (typeof fontObj?.weight === 'number' && fontObj.weight >= 600) ||
@@ -1501,11 +1524,13 @@
                                            lower.includes('heavy') ||
                                            lower.includes('semibold') ||
                                            lower.includes('demibold') ||
-                                           lower.includes('w6') || lower.includes('w7') || lower.includes('w8');
+                                           lower.includes('w6') || lower.includes('w7') || lower.includes('w8') ||
+                                           tcpdfBoldByNumber;
 
                             const isItalic = fontObj?.italic === true ||
                                              lower.includes('italic') ||
-                                             lower.includes('oblique');
+                                             lower.includes('oblique') ||
+                                             tcpdfItalicByNumber;
 
                             const cleanFont = resolveCleanFont(rawName);
                             fontMap[fKey] = { name: rawName, fontFamily: cleanFont, isBold, isItalic };
@@ -1532,12 +1557,8 @@
                                 const halfPts = Math.round(exactPt * 2);
 
                                 let isBold = info.isBold;
-                                const trimmedStr = it.str.trim();
-                                if (!isBold && trimmedStr.length >= 4 && trimmedStr === trimmedStr.toUpperCase() && /^[A-Z0-9\s\.\,\-\/\:\(\)]+$/.test(trimmedStr)) {
-                                    if (/^(KEPUTUSAN|PERATURAN|UNDANGAN|PENGUMUMAN|SURAT\s+EDARAN|MEMUTUSKAN|MENETAPKAN|MENIMBANG|MENGINGAT|KEMENTERIAN\s+AGAMA|DIREKTORAT\s+JENDERAL|KANTOR\s+KEMENTERIAN)/.test(trimmedStr)) {
-                                        isBold = true;
-                                    }
-                                }
+                                // Note: Do NOT force-bold based on uppercase heuristics.
+                                // Let the font metadata from PDF determine bold status.
 
                                 fontCounts[info.fontFamily] = (fontCounts[info.fontFamily] || 0) + 1;
 
@@ -1668,48 +1689,72 @@
                                 const logoColTwips = Math.round((rW + 15) * 20);
                                 const textColTwips = Math.max(1000, contentWidthTwips - logoColTwips);
 
-                                const kopParagraphs = [];
-                                lines.forEach((l, idx) => {
-                                    if (kopLineIndices.has(idx)) {
-                                        l.items.sort((a, b) => a.x - b.x);
-                                        const kChildren = [];
-                                        let prevRight = null;
-                                        l.items.forEach(it => {
-                                            if (prevRight !== null && (it.x - prevRight > 2.5) && !it.text.startsWith(' ')) {
-                                                kChildren.push(new TextRun({ text: ' ' }));
-                                            }
-                                            prevRight = it.x + it.width;
-                                            kChildren.push(new TextRun({
-                                                text: it.text,
-                                                bold: it.isBold,
-                                                italics: it.isItalic,
-                                                size: it.halfPts,
-                                                font: it.fontFamily
-                                            }));
-                                        });
-                                        kopParagraphs.push(new Paragraph({
-                                            alignment: AlignmentType.CENTER,
-                                            spacing: { line: 240, after: 20 },
-                                            children: kChildren
-                                        }));
-                                    }
+                                // Classify kop lines: line 0 = Heading1 (14pt bold), line 1 = Heading2 (12pt bold), rest = address (9pt)
+                                const sortedKopIndices = [...kopLineIndices].sort((a, b) => {
+                                    return lines[b].y - lines[a].y; // highest Y first (top of page)
                                 });
 
+                                const kopParagraphs = [];
+                                sortedKopIndices.forEach((idx, kopOrder) => {
+                                    const l = lines[idx];
+                                    l.items.sort((a, b) => a.x - b.x);
+                                    const kChildren = [];
+                                    let prevRight = null;
+                                    
+                                    // Determine formatting based on kop line order
+                                    let kopSize, kopBold;
+                                    if (kopOrder === 0) {
+                                        // First line: KEMENTERIAN AGAMA REPUBLIK INDONESIA (Heading1: 14pt = 28 half-pts)
+                                        kopSize = 28;
+                                        kopBold = true;
+                                    } else if (kopOrder === 1) {
+                                        // Second line: KANTOR KEMENTERIAN AGAMA KOTA SURABAYA (Heading2: 12pt = 24 half-pts)
+                                        kopSize = 24;
+                                        kopBold = true;
+                                    } else {
+                                        // Address lines: 9pt = 18 half-pts
+                                        kopSize = 18;
+                                        kopBold = false;
+                                    }
+
+                                    l.items.forEach(it => {
+                                        if (prevRight !== null && (it.x - prevRight > 2.5) && !it.text.startsWith(' ')) {
+                                            kChildren.push(new TextRun({ text: ' ' }));
+                                        }
+                                        prevRight = it.x + it.width;
+                                        kChildren.push(new TextRun({
+                                            text: it.text,
+                                            bold: kopBold,
+                                            italics: it.isItalic,
+                                            size: kopSize,
+                                            font: 'Arial'
+                                        }));
+                                    });
+                                    kopParagraphs.push(new Paragraph({
+                                        alignment: AlignmentType.CENTER,
+                                        spacing: { line: kopOrder < 2 ? 240 : 276, after: kopOrder < 2 ? 20 : 0 },
+                                        children: kChildren
+                                    }));
+                                });
+
+                                const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
                                 docChildren.push(new Table({
                                     width: { size: contentWidthTwips, type: WidthType.DXA },
                                     borders: {
-                                        top: { style: BorderStyle.NONE },
-                                        bottom: { style: BorderStyle.NONE },
-                                        left: { style: BorderStyle.NONE },
-                                        right: { style: BorderStyle.NONE },
-                                        insideHorizontal: { style: BorderStyle.NONE },
-                                        insideVertical: { style: BorderStyle.NONE }
+                                        top: noBorder,
+                                        bottom: noBorder,
+                                        left: noBorder,
+                                        right: noBorder,
+                                        insideHorizontal: noBorder,
+                                        insideVertical: noBorder
                                     },
                                     rows: [
                                         new TableRow({
                                             children: [
                                                 new TableCell({
                                                     width: { size: logoColTwips, type: WidthType.DXA },
+                                                    borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
+                                                    verticalAlign: 'center',
                                                     children: [
                                                         new Paragraph({
                                                             alignment: AlignmentType.CENTER,
@@ -1724,11 +1769,26 @@
                                                 }),
                                                 new TableCell({
                                                     width: { size: textColTwips, type: WidthType.DXA },
+                                                    borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
                                                     children: kopParagraphs
                                                 })
                                             ]
                                         })
                                     ]
+                                }));
+
+                                // Add horizontal separator line below kop surat
+                                docChildren.push(new Paragraph({
+                                    spacing: { before: 60, after: 60 },
+                                    border: {
+                                        bottom: {
+                                            style: BorderStyle.SINGLE,
+                                            size: 6,
+                                            color: '000000',
+                                            space: 1
+                                        }
+                                    },
+                                    children: []
                                 }));
                             }
 

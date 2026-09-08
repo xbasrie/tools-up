@@ -675,12 +675,16 @@
                                 100% Client-Side & Aman
                             </span>
                             <span class="upload-badge">
-                                <span class="material-symbols-outlined">text_fields</span>
-                                100% Teks Asli (Tanpa Gambar)
+                                <span class="material-symbols-outlined">image</span>
+                                Gambar & Logo Asli Terjaga
                             </span>
                             <span class="upload-badge">
-                                <span class="material-symbols-outlined">dashboard_customize</span>
-                                Tata Letak Visual Presisi
+                                <span class="material-symbols-outlined">font_download</span>
+                                Font & Margin Asli Terjaga
+                            </span>
+                            <span class="upload-badge">
+                                <span class="material-symbols-outlined">cleaning_services</span>
+                                Hapus Watermark TCPDF
                             </span>
                         </div>
                         
@@ -703,7 +707,7 @@
                                         Presisi Tata Letak (100% Teks)
                                         <span class="mode-pill-rec">Rekomendasi</span>
                                     </h4>
-                                    <p>Mempertahankan posisi visual dokumen, perataan tengah/kanan/kiri, spasi baris, indentasi, dan kolom secara akurat dalam teks Word asli (tanpa diconvert ke gambar).</p>
+                                    <p>Mempertahankan posisi visual dokumen, font asli, perataan tengah/kanan/kiri, spasi baris, indentasi, dan kolom secara akurat dalam teks Word asli.</p>
                                 </div>
                             </label>
 
@@ -734,7 +738,15 @@
                             </label>
                             <label class="custom-checkbox-label">
                                 <input type="checkbox" id="chkPreserveSpacing" checked>
-                                <span>Pertahankan Spasi Vertikal Asli Antar Paragraf/Bagian</span>
+                                <span>Pertahankan Spasi Vertikal Asli</span>
+                            </label>
+                            <label class="custom-checkbox-label">
+                                <input type="checkbox" id="chkExtractImages" checked>
+                                <span>Pertahankan Gambar Asli PDF (Logo Kop, Foto, Tanda Tangan/Cap)</span>
+                            </label>
+                            <label class="custom-checkbox-label">
+                                <input type="checkbox" id="chkRemoveWatermark" checked>
+                                <span>Hapus Watermark (Powered by TCPDF)</span>
                             </label>
                         </div>
                     </div>
@@ -823,6 +835,8 @@
             const overallProgressPercent = document.getElementById('overallProgressPercent');
             const chkPageBreak = document.getElementById('chkPageBreak');
             const chkPreserveSpacing = document.getElementById('chkPreserveSpacing');
+            const chkExtractImages = document.getElementById('chkExtractImages');
+            const chkRemoveWatermark = document.getElementById('chkRemoveWatermark');
 
             // Radio Mode Cards Visual Binding
             const modeCards = document.querySelectorAll('.mode-option-card');
@@ -1186,7 +1200,218 @@
                 btnDownloadAllZip.disabled = completedCount === 0;
             }
 
-            // CORE CONVERSION ENGINE: Convert PDF to DOCX with Pure Text Visual Layout
+            // Helper: Detect and filter watermarks like "Powered by TCPDF (www.tcpdf.org)"
+            function isWatermarkText(str) {
+                if (!str) return false;
+                const clean = str.toLowerCase().replace(/[\s\(\)\.\:\/_-]+/g, '');
+                return clean.includes('tcpdf') || clean.includes('poweredbytcpdf') || clean.includes('wwwtcpdforg');
+            }
+
+            // Helper: Clean and map PDF font name to standard Word font
+            function resolveCleanFont(fontName) {
+                if (!fontName) return 'Arial';
+                let name = fontName.replace(/^[A-Z]{6}\+/, '').trim();
+                const lower = name.toLowerCase();
+
+                if (lower.includes('times') || lower.includes('roman') || lower.includes('cambria')) {
+                    return 'Times New Roman';
+                }
+                if (lower.includes('bookman') || lower.includes('oldstyle')) {
+                    return 'Bookman Old Style';
+                }
+                if (lower.includes('garamond')) {
+                    return 'Garamond';
+                }
+                if (lower.includes('calibri')) {
+                    return 'Calibri';
+                }
+                if (lower.includes('arial') || lower.includes('helvetica')) {
+                    return 'Arial';
+                }
+                if (lower.includes('courier') || lower.includes('mono')) {
+                    return 'Courier New';
+                }
+                if (lower.includes('georgia')) {
+                    return 'Georgia';
+                }
+                if (lower.includes('verdana')) {
+                    return 'Verdana';
+                }
+                if (lower.includes('tahoma')) {
+                    return 'Tahoma';
+                }
+                if (lower.includes('trebuchet')) {
+                    return 'Trebuchet MS';
+                }
+
+                name = name.replace(/-(Bold|Italic|BoldItalic|Regular|MT|PSMT|Medium|SemiBold)$/i, '');
+                name = name.replace(/([a-z])([A-Z])/g, '$1 $2').trim();
+
+                if (name.length > 2 && /^[a-zA-Z\s]+$/.test(name)) {
+                    return name;
+                }
+                return 'Arial';
+            }
+
+            // Helper: Convert internal PDF image object to Uint8Array for docx.ImageRun
+            async function convertPdfImageToUint8(imgObj) {
+                try {
+                    if (!imgObj) return null;
+
+                    const canvas = document.createElement('canvas');
+                    const width = imgObj.width || 100;
+                    const height = imgObj.height || 100;
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+
+                    if (imgObj instanceof HTMLImageElement || (imgObj.src && typeof imgObj.src === 'string')) {
+                        ctx.drawImage(imgObj, 0, 0);
+                    } else if (imgObj.data) {
+                        const imgData = ctx.createImageData(width, height);
+                        const len = imgObj.data.length;
+                        const pixels = width * height;
+
+                        if (len === pixels * 4) {
+                            imgData.data.set(imgObj.data);
+                        } else if (len === pixels * 3) {
+                            for (let p = 0, q = 0; p < len; p += 3, q += 4) {
+                                imgData.data[q] = imgObj.data[p];
+                                imgData.data[q + 1] = imgObj.data[p + 1];
+                                imgData.data[q + 2] = imgObj.data[p + 2];
+                                imgData.data[q + 3] = 255;
+                            }
+                        } else if (len === pixels) {
+                            for (let p = 0, q = 0; p < len; p++, q += 4) {
+                                const v = imgObj.data[p];
+                                imgData.data[q] = v;
+                                imgData.data[q + 1] = v;
+                                imgData.data[q + 2] = v;
+                                imgData.data[q + 3] = 255;
+                            }
+                        } else {
+                            return null;
+                        }
+                        ctx.putImageData(imgData, 0, 0);
+                    } else {
+                        return null;
+                    }
+
+                    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+                    if (!blob) return null;
+                    const buf = await blob.arrayBuffer();
+                    return new Uint8Array(buf);
+                } catch (err) {
+                    console.warn('Gagal mengonversi data gambar:', err);
+                    return null;
+                }
+            }
+
+            // Extract genuine embedded images from PDF page using operatorList
+            async function extractPageImages(page, pageWidth, pageHeight) {
+                const images = [];
+                try {
+                    const opList = await page.getOperatorList();
+                    let currentMatrix = [1, 0, 0, 1, 0, 0];
+                    const matrixStack = [];
+
+                    function multiply(m1, m2) {
+                        return [
+                            m1[0] * m2[0] + m1[2] * m2[1],
+                            m1[1] * m2[0] + m1[3] * m2[1],
+                            m1[0] * m2[2] + m1[2] * m2[3],
+                            m1[1] * m2[2] + m1[3] * m2[3],
+                            m1[0] * m2[4] + m1[2] * m2[5] + m1[4],
+                            m1[1] * m2[4] + m1[3] * m2[5] + m1[5]
+                        ];
+                    }
+
+                    const imageTasks = [];
+                    for (let i = 0; i < opList.fnArray.length; i++) {
+                        const fn = opList.fnArray[i];
+                        const args = opList.argsArray[i];
+
+                        if (fn === pdfjsLib.OPS.save) {
+                            matrixStack.push([...currentMatrix]);
+                        } else if (fn === pdfjsLib.OPS.restore) {
+                            if (matrixStack.length > 0) currentMatrix = matrixStack.pop();
+                        } else if (fn === pdfjsLib.OPS.transform) {
+                            currentMatrix = multiply(currentMatrix, args);
+                        } else if (
+                            fn === pdfjsLib.OPS.paintJpegXObject ||
+                            fn === pdfjsLib.OPS.paintImageXObject ||
+                            fn === pdfjsLib.OPS.paintInlineImageXObject
+                        ) {
+                            const imgName = args[0];
+                            const x = currentMatrix[4];
+                            const y = currentMatrix[5];
+                            const w = Math.hypot(currentMatrix[0], currentMatrix[1]) || 50;
+                            const h = Math.hypot(currentMatrix[2], currentMatrix[3]) || 50;
+
+                            // Process meaningful images (logos, stamps, photos >= 12px)
+                            if (w >= 12 && h >= 12) {
+                                imageTasks.push({ name: imgName, x, y, width: w, height: h });
+                            }
+                        }
+                    }
+
+                    for (const item of imageTasks) {
+                        let imgObj = null;
+                        try {
+                            if (page.objs && page.objs.has(item.name)) {
+                                imgObj = page.objs.get(item.name);
+                            } else if (page.commonObjs && page.commonObjs.has(item.name)) {
+                                imgObj = page.commonObjs.get(item.name);
+                            }
+                        } catch (e) {
+                            // Continue
+                        }
+
+                        if (!imgObj) {
+                            imgObj = await new Promise(resolve => {
+                                let done = false;
+                                const cb = (data) => {
+                                    if (!done) {
+                                        done = true;
+                                        resolve(data);
+                                    }
+                                };
+                                try {
+                                    if (page.objs) page.objs.get(item.name, cb);
+                                    else if (page.commonObjs) page.commonObjs.get(item.name, cb);
+                                    else resolve(null);
+                                } catch (e) {
+                                    resolve(null);
+                                }
+                                setTimeout(() => {
+                                    if (!done) {
+                                        done = true;
+                                        resolve(null);
+                                    }
+                                }, 350);
+                            });
+                        }
+
+                        if (imgObj) {
+                            const uint8 = await convertPdfImageToUint8(imgObj);
+                            if (uint8) {
+                                images.push({
+                                    x: item.x,
+                                    y: item.y,
+                                    width: item.width,
+                                    height: item.height,
+                                    data: uint8
+                                });
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.warn('Notice extracting images from page:', err);
+                }
+                return images;
+            }
+
+            // CORE CONVERSION ENGINE: Convert PDF to DOCX with Pure Text Visual Layout, Fonts, Margins & Images
             async function processFileConversion(item) {
                 if (!window.docx) {
                     showToast('Pustaka docx.js belum siap dimuat.', 'error');
@@ -1198,10 +1423,12 @@
                 item.progressPercent = 10;
                 updateFileCardDOM(item);
 
-                const { Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak, AlignmentType, TabStopType } = window.docx;
+                const { Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak, AlignmentType, TabStopType, ImageRun } = window.docx;
                 const mode = document.querySelector('input[name="convertMode"]:checked')?.value || 'visual';
                 const addPageBreak = chkPageBreak.checked;
                 const preserveSpacing = chkPreserveSpacing.checked;
+                const extractImages = chkExtractImages ? chkExtractImages.checked : true;
+                const removeWatermark = chkRemoveWatermark ? chkRemoveWatermark.checked : true;
 
                 try {
                     const arrayBuffer = await item.file.arrayBuffer();
@@ -1212,6 +1439,9 @@
                     const docChildren = [];
                     let firstPageWidth = 595;
                     let firstPageHeight = 842;
+                    let docMargin = { top: 720, right: 720, bottom: 720, left: 720 };
+                    let dominantFont = 'Arial';
+                    const fontCounts = {};
 
                     for (let pageNum = 1; pageNum <= numPages; pageNum++) {
                         item.progressText = `Memproses Halaman ${pageNum} / ${numPages}...`;
@@ -1228,38 +1458,81 @@
                             firstPageHeight = pageHeight;
                         }
 
+                        // Extract text content
                         const textContent = await page.getTextContent();
                         const rawItems = textContent.items || [];
 
-                        // Extract all text items with exact coordinates
+                        // Filter out empty and watermark strings (Powered by TCPDF)
                         const processedItems = rawItems
-                            .filter(it => it.str && it.str.length > 0)
+                            .filter(it => {
+                                if (!it.str || it.str.trim().length === 0) return false;
+                                if (removeWatermark && isWatermarkText(it.str)) return false;
+                                return true;
+                            })
                             .map(it => {
                                 const fontSize = Math.round(Math.hypot(it.transform[0], it.transform[1]) || it.height || 11);
                                 const fontName = (it.fontName || '').toLowerCase();
                                 const isBold = fontName.includes('bold') || fontName.includes('black') || fontName.includes('heavy') || fontName.includes('b') || fontName.includes('medium');
                                 const isItalic = fontName.includes('italic') || fontName.includes('oblique');
+                                const cleanFont = resolveCleanFont(it.fontName);
+
+                                // Track font frequency
+                                fontCounts[cleanFont] = (fontCounts[cleanFont] || 0) + 1;
 
                                 return {
                                     text: it.str,
                                     x: it.transform[4],
                                     y: it.transform[5],
                                     width: it.width || 0,
+                                    height: it.height || fontSize,
                                     fontSize: fontSize,
                                     isBold: isBold,
-                                    isItalic: isItalic
+                                    isItalic: isItalic,
+                                    fontFamily: cleanFont
                                 };
                             });
 
-                        if (processedItems.length === 0) {
-                            // If page has no digital text (scanned PDF), do NOT convert to image as requested.
-                            // Inform the user cleanly with a placeholder paragraph.
+                        // Calculate dynamic page margins based on detected content bounding box
+                        let pageMinX = 54;
+                        let pageMaxX = pageWidth - 54;
+                        let pageMinY = 54;
+                        let pageMaxY = pageHeight - 54;
+
+                        if (processedItems.length > 0) {
+                            pageMinX = Math.min(...processedItems.map(it => it.x));
+                            pageMaxX = Math.max(...processedItems.map(it => it.x + (it.width || 0)));
+                            pageMinY = Math.min(...processedItems.map(it => it.y));
+                            pageMaxY = Math.max(...processedItems.map(it => it.y + (it.height || it.fontSize || 12)));
+                        }
+
+                        // Convert to Word twips (1 pt = 20 twips) and clamp realistically (0.35 in to 1.5 in)
+                        const detectedMarginLeft = Math.max(500, Math.min(2160, Math.round(pageMinX * 20)));
+                        const detectedMarginRight = Math.max(500, Math.min(2160, Math.round((pageWidth - pageMaxX) * 20)));
+                        const detectedMarginTop = Math.max(500, Math.min(2160, Math.round((pageHeight - pageMaxY) * 20)));
+                        const detectedMarginBottom = Math.max(500, Math.min(2160, Math.round(pageMinY * 20)));
+
+                        if (pageNum === 1) {
+                            docMargin = {
+                                top: detectedMarginTop,
+                                right: detectedMarginRight,
+                                bottom: detectedMarginBottom,
+                                left: detectedMarginLeft
+                            };
+                        }
+
+                        // Extract genuine embedded images (logos, stamps, photos) from PDF if enabled
+                        let pageImages = [];
+                        if (extractImages) {
+                            pageImages = await extractPageImages(page, pageWidth, pageHeight);
+                        }
+
+                        if (processedItems.length === 0 && pageImages.length === 0) {
                             docChildren.push(
                                 new Paragraph({
                                     spacing: { before: 240, after: 240 },
                                     children: [
                                         new TextRun({
-                                            text: `[Halaman ${pageNum} tidak memuat lapisan teks digital yang dapat diekstrak]`,
+                                            text: `[Halaman ${pageNum} tidak memuat teks atau gambar digital yang dapat diekstrak]`,
                                             italics: true,
                                             size: 20
                                         })
@@ -1267,10 +1540,10 @@
                                 })
                             );
                         } else {
-                            // Sort by Y descending (PDF top to bottom)
+                            // Sort text items by Y descending (top to bottom)
                             processedItems.sort((a, b) => b.y - a.y);
 
-                            // Group into visual lines (tolerance based on font size ~3.5 to 4.5pt)
+                            // Group text items into visual lines
                             const lines = [];
                             let currentLine = [];
                             let currentLineY = null;
@@ -1291,27 +1564,59 @@
                                 lines.push({ y: currentLineY, items: currentLine });
                             }
 
-                            // Calculate baseline average metrics
-                            let prevLineY = null;
-                            const avgFontSize = processedItems.reduce((acc, it) => acc + it.fontSize, 0) / processedItems.length;
+                            // Combine text lines and embedded images into unified page elements list
+                            const pageElements = [
+                                ...lines.map(line => ({ type: 'line', y: line.y, line: line })),
+                                ...pageImages.map(img => ({ type: 'image', y: img.y, image: img }))
+                            ];
+
+                            // Sort elements by Y descending (PDF top-to-bottom order)
+                            pageElements.sort((a, b) => b.y - a.y);
+
+                            // Process elements
+                            let prevElementY = null;
+                            const avgFontSize = processedItems.length > 0
+                                ? (processedItems.reduce((acc, it) => acc + it.fontSize, 0) / processedItems.length)
+                                : 12;
                             const avgLineGap = avgFontSize * 1.35;
 
                             if (mode === 'flow') {
                                 // MODE: Paragraf Mengalir (Merge flow text)
                                 let flowChildren = [];
-                                lines.forEach(lineObj => {
+                                pageElements.forEach(el => {
+                                    if (el.type === 'image') {
+                                        if (flowChildren.length > 0) {
+                                            docChildren.push(new Paragraph({ spacing: { after: 140, line: 276 }, children: flowChildren }));
+                                            flowChildren = [];
+                                        }
+                                        const img = el.image;
+                                        const maxW = Math.max(100, pageWidth - 100);
+                                        const scale = img.width > maxW ? (maxW / img.width) : 1;
+                                        docChildren.push(new Paragraph({
+                                            alignment: AlignmentType.CENTER,
+                                            spacing: { before: 120, after: 120 },
+                                            children: [
+                                                new ImageRun({
+                                                    data: img.data,
+                                                    transformation: { width: Math.round(img.width * scale), height: Math.round(img.height * scale) }
+                                                })
+                                            ]
+                                        }));
+                                        return;
+                                    }
+
+                                    const lineObj = el.line;
                                     lineObj.items.sort((a, b) => a.x - b.x);
 
-                                    const lineGap = prevLineY !== null ? (prevLineY - lineObj.y) : null;
-                                    prevLineY = lineObj.y;
+                                    // Check watermark line
+                                    const lineFullText = lineObj.items.map(it => it.text).join('');
+                                    if (removeWatermark && isWatermarkText(lineFullText)) return;
+
+                                    const lineGap = prevElementY !== null ? (prevElementY - lineObj.y) : null;
+                                    prevElementY = lineObj.y;
 
                                     if (lineGap !== null && lineGap > avgLineGap * 1.7 && flowChildren.length > 0) {
-                                        docChildren.push(
-                                            new Paragraph({
-                                                spacing: { after: 160, line: 276 },
-                                                children: flowChildren
-                                            })
-                                        );
+                                        docChildren.push(new Paragraph({ spacing: { after: 160, line: 276 }, children: flowChildren }));
                                         flowChildren = [];
                                     } else if (flowChildren.length > 0) {
                                         flowChildren.push(new TextRun({ text: " " }));
@@ -1330,25 +1635,64 @@
                                                 text: spacePrefix + it.text,
                                                 bold: it.isBold,
                                                 italics: it.isItalic,
-                                                size: Math.max(16, Math.min(56, it.fontSize * 2))
+                                                size: Math.max(16, Math.min(56, it.fontSize * 2)),
+                                                font: it.fontFamily
                                             })
                                         );
                                     });
                                 });
 
                                 if (flowChildren.length > 0) {
-                                    docChildren.push(
-                                        new Paragraph({
-                                            spacing: { after: 160, line: 276 },
-                                            children: flowChildren
-                                        })
-                                    );
+                                    docChildren.push(new Paragraph({ spacing: { after: 160, line: 276 }, children: flowChildren }));
                                 }
 
                             } else {
-                                // MODE: Presisi Visual & Tabular (100% Real Text with Alignment, Indents & TabStops)
-                                lines.forEach(lineObj => {
+                                // MODE: Presisi Visual & Tabular (100% Real Text & Embedded Images with Alignment, Indents & TabStops)
+                                pageElements.forEach(el => {
+                                    if (el.type === 'image') {
+                                        const img = el.image;
+                                        const isImgCenter = Math.abs((img.x + img.width / 2) - (pageWidth / 2)) < 35;
+                                        const isImgRight = (pageWidth - (img.x + img.width) < 95) && (img.x > pageWidth * 0.4);
+                                        const alignment = isImgCenter ? AlignmentType.CENTER : (isImgRight ? AlignmentType.RIGHT : AlignmentType.LEFT);
+
+                                        const maxW = Math.max(100, pageWidth - 100);
+                                        const scale = img.width > maxW ? (maxW / img.width) : 1;
+                                        const renderW = Math.round(img.width * scale);
+                                        const renderH = Math.round(img.height * scale);
+
+                                        const pImgOptions = {
+                                            alignment: alignment,
+                                            spacing: { before: 120, after: 120 },
+                                            children: [
+                                                new ImageRun({
+                                                    data: img.data,
+                                                    transformation: {
+                                                        width: renderW,
+                                                        height: renderH
+                                                    }
+                                                })
+                                            ]
+                                        };
+
+                                        const imgIndent = Math.max(0, Math.round((img.x - pageMinX) * 20));
+                                        if (imgIndent > 140 && alignment === AlignmentType.LEFT) {
+                                            pImgOptions.indent = { left: imgIndent };
+                                        }
+
+                                        docChildren.push(new Paragraph(pImgOptions));
+                                        prevElementY = img.y;
+                                        return;
+                                    }
+
+                                    // Line element
+                                    const lineObj = el.line;
                                     lineObj.items.sort((a, b) => a.x - b.x);
+
+                                    // Check watermark line
+                                    const lineFullText = lineObj.items.map(it => it.text).join('');
+                                    if (removeWatermark && isWatermarkText(lineFullText)) {
+                                        return;
+                                    }
 
                                     const lineLeft = lineObj.items[0].x;
                                     const lastItem = lineObj.items[lineObj.items.length - 1];
@@ -1372,22 +1716,22 @@
                                         alignment = AlignmentType.RIGHT;
                                     } else {
                                         alignment = AlignmentType.LEFT;
-                                        // Indentation for items past base margin (~36-40pt)
-                                        if (lineLeft > 54) {
-                                            indentLeftTwips = Math.round((lineLeft - 40) * 20);
+                                        // Indentation relative to detected left margin
+                                        if (lineLeft > pageMinX + 10) {
+                                            indentLeftTwips = Math.round((lineLeft - pageMinX) * 20);
                                         }
                                     }
 
                                     // Vertical spacing gap before this line
                                     let spacingBefore = 0;
-                                    if (prevLineY !== null && preserveSpacing) {
-                                        const lineGap = prevLineY - lineObj.y;
+                                    if (prevElementY !== null && preserveSpacing) {
+                                        const lineGap = prevElementY - lineObj.y;
                                         const lineBaseHeight = Math.max(12, lineObj.items[0].fontSize * 1.25);
                                         if (lineGap > lineBaseHeight * 1.4) {
                                             spacingBefore = Math.min(500, Math.round((lineGap - lineBaseHeight) * 16));
                                         }
                                     }
-                                    prevLineY = lineObj.y;
+                                    prevElementY = lineObj.y;
 
                                     // Tab Stops and Column Positioning within line
                                     const tabStops = [];
@@ -1420,7 +1764,8 @@
                                                 text: it.text,
                                                 bold: it.isBold,
                                                 italics: it.isItalic,
-                                                size: halfPts
+                                                size: halfPts,
+                                                font: it.fontFamily
                                             })
                                         );
                                     }
@@ -1435,9 +1780,9 @@
                                     }
 
                                     if (spacingBefore > 0) {
-                                        pOptions.spacing = { before: spacingBefore, line: 240, after: 40 };
+                                        pOptions.spacing = { before: spacingBefore, line: 240, after: 30 };
                                     } else {
-                                        pOptions.spacing = { line: 240, after: 40 };
+                                        pOptions.spacing = { line: 240, after: 30 };
                                     }
 
                                     if (tabStops.length > 0) {
@@ -1459,7 +1804,16 @@
                         }
                     }
 
-                    // Build Document with Exact Page Sizing (A4 / Original PDF Dimensions in twips)
+                    // Determine dominant font in document
+                    let maxCount = 0;
+                    for (const [fName, count] of Object.entries(fontCounts)) {
+                        if (count > maxCount) {
+                            maxCount = count;
+                            dominantFont = fName;
+                        }
+                    }
+
+                    // Build Document with Exact Page Sizing (A4 / Original PDF Dimensions) and Detected Margins
                     item.progressText = 'Menyusun berkas Word (.docx)...';
                     item.progressPercent = 95;
                     updateFileCardDOM(item);
@@ -1467,7 +1821,16 @@
                     const doc = new Document({
                         creator: 'Tools Kepegawaian Kemenag',
                         title: item.file.name.replace(/\.[^/.]+$/, ""),
-                        description: 'Hasil konversi presisi teks PDF ke DOCX',
+                        description: 'Hasil konversi presisi teks & gambar PDF ke DOCX',
+                        styles: {
+                            default: {
+                                document: {
+                                    run: {
+                                        font: dominantFont
+                                    }
+                                }
+                            }
+                        },
                         sections: [{
                             properties: {
                                 page: {
@@ -1475,12 +1838,7 @@
                                         width: Math.round(firstPageWidth * 20),
                                         height: Math.round(firstPageHeight * 20)
                                     },
-                                    margin: {
-                                        top: 720,
-                                        right: 720,
-                                        bottom: 720,
-                                        left: 720
-                                    }
+                                    margin: docMargin
                                 }
                             },
                             children: docChildren.length > 0 ? docChildren : [

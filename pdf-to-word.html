@@ -675,12 +675,12 @@
                                 100% Client-Side & Aman
                             </span>
                             <span class="upload-badge">
-                                <span class="material-symbols-outlined">edit_note</span>
-                                Hasil Format .DOCX
+                                <span class="material-symbols-outlined">text_fields</span>
+                                100% Teks Asli (Tanpa Gambar)
                             </span>
                             <span class="upload-badge">
-                                <span class="material-symbols-outlined">document_scanner</span>
-                                Auto-Fallback Scan
+                                <span class="material-symbols-outlined">dashboard_customize</span>
+                                Tata Letak Visual Presisi
                             </span>
                         </div>
                         
@@ -691,37 +691,37 @@
                     <div style="margin-top: 1.75rem;">
                         <h4 style="font-size: 0.95rem; font-weight: 600; color: #cbd5e1; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
                             <span class="material-symbols-outlined" style="font-size: 1.15rem; color: #60a5fa;">tune</span>
-                            Metode & Preferensi Konversi
+                            Metode & Preferensi Tata Letak Teks
                         </h4>
 
                         <div class="mode-selection-grid">
-                            <!-- Option 1: Smart Auto -->
-                            <label class="mode-option-card active" id="cardModeSmart">
-                                <input type="radio" name="convertMode" value="smart" checked>
+                            <!-- Option 1: Visual Precision (No Image) -->
+                            <label class="mode-option-card active" id="cardModeVisual">
+                                <input type="radio" name="convertMode" value="visual" checked>
                                 <div class="mode-card-content">
                                     <h4>
-                                        Cerdas / Otomatis
+                                        Presisi Tata Letak (100% Teks)
                                         <span class="mode-pill-rec">Rekomendasi</span>
                                     </h4>
-                                    <p>Ekstraksi teks cerdas dengan deteksi otomatis. Jika halaman berupa scan atau gambar, otomatis disisipkan gambar beresolusi tinggi agar tidak kosong.</p>
+                                    <p>Mempertahankan posisi visual dokumen, perataan tengah/kanan/kiri, spasi baris, indentasi, dan kolom secara akurat dalam teks Word asli (tanpa diconvert ke gambar).</p>
                                 </div>
                             </label>
 
-                            <!-- Option 2: Full Editable Text -->
-                            <label class="mode-option-card" id="cardModeText">
-                                <input type="radio" name="convertMode" value="text">
+                            <!-- Option 2: Flow Paragraphs -->
+                            <label class="mode-option-card" id="cardModeFlow">
+                                <input type="radio" name="convertMode" value="flow">
                                 <div class="mode-card-content">
-                                    <h4>Teks Terstruktur (Editable)</h4>
-                                    <p>Fokus mengekstrak seluruh teks, susunan baris, font tebal, dan paragraf menjadi teks murni yang bebas diedit penuh di Word.</p>
+                                    <h4>Paragraf Mengalir (Flow Teks)</h4>
+                                    <p>Menggabungkan baris teks menjadi paragraf mengalir standar Word untuk kemudahan pengeditan kalimat narasi laporan atau surat dinas.</p>
                                 </div>
                             </label>
 
-                            <!-- Option 3: Visual Precision -->
-                            <label class="mode-option-card" id="cardModeVisual">
-                                <input type="radio" name="convertMode" value="visual">
+                            <!-- Option 3: Tabular & Column -->
+                            <label class="mode-option-card" id="cardModeTable">
+                                <input type="radio" name="convertMode" value="table">
                                 <div class="mode-card-content">
-                                    <h4>Presisi Visual (Dokumen Asli)</h4>
-                                    <p>Mempertahankan tata letak visual 100% persis asli termasuk cap/stempel dan tanda tangan basah dalam dokumen Word.</p>
+                                    <h4>Kolom & Tabulasi Data</h4>
+                                    <p>Dioptimalkan untuk dokumen berformat biodata ASN, daftar tabel data, atau lampiran SK dengan penyelarasan tab stop horizontal presisi.</p>
                                 </div>
                             </label>
                         </div>
@@ -734,7 +734,7 @@
                             </label>
                             <label class="custom-checkbox-label">
                                 <input type="checkbox" id="chkPreserveSpacing" checked>
-                                <span>Pertahankan Spasi Baris Asli (Rapi untuk Kop Surat & SK)</span>
+                                <span>Pertahankan Spasi Vertikal Asli Antar Paragraf/Bagian</span>
                             </label>
                         </div>
                     </div>
@@ -1186,7 +1186,7 @@
                 btnDownloadAllZip.disabled = completedCount === 0;
             }
 
-            // CORE CONVERSION ENGINE: Convert PDF to DOCX
+            // CORE CONVERSION ENGINE: Convert PDF to DOCX with Pure Text Visual Layout
             async function processFileConversion(item) {
                 if (!window.docx) {
                     showToast('Pustaka docx.js belum siap dimuat.', 'error');
@@ -1198,8 +1198,8 @@
                 item.progressPercent = 10;
                 updateFileCardDOM(item);
 
-                const { Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak, ImageRun } = window.docx;
-                const mode = document.querySelector('input[name="convertMode"]:checked')?.value || 'smart';
+                const { Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak, AlignmentType, TabStopType } = window.docx;
+                const mode = document.querySelector('input[name="convertMode"]:checked')?.value || 'visual';
                 const addPageBreak = chkPageBreak.checked;
                 const preserveSpacing = chkPreserveSpacing.checked;
 
@@ -1210,6 +1210,8 @@
                     item.totalPages = numPages;
 
                     const docChildren = [];
+                    let firstPageWidth = 595;
+                    let firstPageHeight = 842;
 
                     for (let pageNum = 1; pageNum <= numPages; pageNum++) {
                         item.progressText = `Memproses Halaman ${pageNum} / ${numPages}...`;
@@ -1217,158 +1219,237 @@
                         updateFileCardDOM(item);
 
                         const page = await pdf.getPage(pageNum);
-                        const viewport = page.getViewport({ scale: 1.5 });
+                        const pageView = page.view || [0, 0, 595, 842];
+                        const pageWidth = pageView[2] - pageView[0];
+                        const pageHeight = pageView[3] - pageView[1];
+
+                        if (pageNum === 1) {
+                            firstPageWidth = pageWidth;
+                            firstPageHeight = pageHeight;
+                        }
+
                         const textContent = await page.getTextContent();
                         const rawItems = textContent.items || [];
 
-                        // Determine if page is scanned or text
-                        const totalChars = rawItems.reduce((acc, it) => acc + (it.str ? it.str.trim().length : 0), 0);
-                        const isScannedOrVisual = mode === 'visual' || (mode === 'smart' && totalChars < 25);
+                        // Extract all text items with exact coordinates
+                        const processedItems = rawItems
+                            .filter(it => it.str && it.str.length > 0)
+                            .map(it => {
+                                const fontSize = Math.round(Math.hypot(it.transform[0], it.transform[1]) || it.height || 11);
+                                const fontName = (it.fontName || '').toLowerCase();
+                                const isBold = fontName.includes('bold') || fontName.includes('black') || fontName.includes('heavy') || fontName.includes('b') || fontName.includes('medium');
+                                const isItalic = fontName.includes('italic') || fontName.includes('oblique');
 
-                        if (isScannedOrVisual) {
-                            // Render page visual to high-res canvas
-                            const canvas = document.createElement('canvas');
-                            canvas.width = viewport.width;
-                            canvas.height = viewport.height;
-                            const ctx = canvas.getContext('2d');
-                            
-                            // Fill background white
-                            ctx.fillStyle = '#ffffff';
-                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                                return {
+                                    text: it.str,
+                                    x: it.transform[4],
+                                    y: it.transform[5],
+                                    width: it.width || 0,
+                                    fontSize: fontSize,
+                                    isBold: isBold,
+                                    isItalic: isItalic
+                                };
+                            });
 
-                            await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-
-                            const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
-                            const imgBuffer = await blob.arrayBuffer();
-                            const imgUint8 = new Uint8Array(imgBuffer);
-
-                            // Calculate width to fit standard A4 margins (approx 520 points width)
-                            const docxImgWidth = 520;
-                            const docxImgHeight = Math.round(docxImgWidth * (viewport.height / viewport.width));
-
+                        if (processedItems.length === 0) {
+                            // If page has no digital text (scanned PDF), do NOT convert to image as requested.
+                            // Inform the user cleanly with a placeholder paragraph.
                             docChildren.push(
                                 new Paragraph({
-                                    spacing: { before: 100, after: 100 },
+                                    spacing: { before: 240, after: 240 },
                                     children: [
-                                        new ImageRun({
-                                            data: imgUint8,
-                                            transformation: {
-                                                width: docxImgWidth,
-                                                height: docxImgHeight
-                                            }
+                                        new TextRun({
+                                            text: `[Halaman ${pageNum} tidak memuat lapisan teks digital yang dapat diekstrak]`,
+                                            italics: true,
+                                            size: 20
                                         })
                                     ]
                                 })
                             );
                         } else {
-                            // Extract Structured Text
-                            // PDF coordinates: transform[4] is X, transform[5] is Y (Y is 0 at bottom)
-                            const processedItems = rawItems
-                                .filter(it => it.str && it.str.length > 0)
-                                .map(it => {
-                                    const fontSize = Math.round(Math.hypot(it.transform[0], it.transform[1]) || it.height || 11);
-                                    const fontName = (it.fontName || '').toLowerCase();
-                                    const isBold = fontName.includes('bold') || fontName.includes('black') || fontName.includes('heavy') || fontName.includes('b');
-                                    const isItalic = fontName.includes('italic') || fontName.includes('oblique');
-
-                                    return {
-                                        text: it.str,
-                                        x: it.transform[4],
-                                        y: it.transform[5],
-                                        width: it.width || 0,
-                                        fontSize: fontSize,
-                                        isBold: isBold,
-                                        isItalic: isItalic
-                                    };
-                                });
-
-                            // Sort by Y descending (top to bottom)
+                            // Sort by Y descending (PDF top to bottom)
                             processedItems.sort((a, b) => b.y - a.y);
 
-                            // Group into lines by Y proximity (tolerance ~4.5 points)
+                            // Group into visual lines (tolerance based on font size ~3.5 to 4.5pt)
                             const lines = [];
                             let currentLine = [];
                             let currentLineY = null;
 
-                            processedItems.forEach(item => {
+                            processedItems.forEach(it => {
                                 if (currentLineY === null) {
-                                    currentLineY = item.y;
-                                    currentLine.push(item);
-                                } else if (Math.abs(item.y - currentLineY) <= 4.5) {
-                                    currentLine.push(item);
+                                    currentLineY = it.y;
+                                    currentLine.push(it);
+                                } else if (Math.abs(it.y - currentLineY) <= Math.max(3.5, it.fontSize * 0.35)) {
+                                    currentLine.push(it);
                                 } else {
                                     lines.push({ y: currentLineY, items: currentLine });
-                                    currentLine = [item];
-                                    currentLineY = item.y;
+                                    currentLine = [it];
+                                    currentLineY = it.y;
                                 }
                             });
                             if (currentLine.length > 0) {
                                 lines.push({ y: currentLineY, items: currentLine });
                             }
 
-                            // Process lines into DOCX Paragraphs
-                            let currentParagraphChildren = [];
+                            // Calculate baseline average metrics
                             let prevLineY = null;
-                            let avgLineGap = 16;
+                            const avgFontSize = processedItems.reduce((acc, it) => acc + it.fontSize, 0) / processedItems.length;
+                            const avgLineGap = avgFontSize * 1.35;
 
-                            lines.forEach((lineObj, lineIdx) => {
-                                // Sort line items from left to right (X ascending)
-                                lineObj.items.sort((a, b) => a.x - b.x);
+                            if (mode === 'flow') {
+                                // MODE: Paragraf Mengalir (Merge flow text)
+                                let flowChildren = [];
+                                lines.forEach(lineObj => {
+                                    lineObj.items.sort((a, b) => a.x - b.x);
 
-                                const lineGap = prevLineY !== null ? (prevLineY - lineObj.y) : null;
-                                prevLineY = lineObj.y;
+                                    const lineGap = prevLineY !== null ? (prevLineY - lineObj.y) : null;
+                                    prevLineY = lineObj.y;
 
-                                // If large gap detected and we have existing runs, close paragraph
-                                if (lineGap !== null && lineGap > avgLineGap * 1.8 && currentParagraphChildren.length > 0) {
+                                    if (lineGap !== null && lineGap > avgLineGap * 1.7 && flowChildren.length > 0) {
+                                        docChildren.push(
+                                            new Paragraph({
+                                                spacing: { after: 160, line: 276 },
+                                                children: flowChildren
+                                            })
+                                        );
+                                        flowChildren = [];
+                                    } else if (flowChildren.length > 0) {
+                                        flowChildren.push(new TextRun({ text: " " }));
+                                    }
+
+                                    let prevItemRight = null;
+                                    lineObj.items.forEach(it => {
+                                        let spacePrefix = "";
+                                        if (prevItemRight !== null && (it.x - prevItemRight > 3.0) && !it.text.startsWith(' ')) {
+                                            spacePrefix = " ";
+                                        }
+                                        prevItemRight = it.x + it.width;
+
+                                        flowChildren.push(
+                                            new TextRun({
+                                                text: spacePrefix + it.text,
+                                                bold: it.isBold,
+                                                italics: it.isItalic,
+                                                size: Math.max(16, Math.min(56, it.fontSize * 2))
+                                            })
+                                        );
+                                    });
+                                });
+
+                                if (flowChildren.length > 0) {
                                     docChildren.push(
                                         new Paragraph({
                                             spacing: { after: 160, line: 276 },
-                                            children: currentParagraphChildren
+                                            children: flowChildren
                                         })
                                     );
-                                    currentParagraphChildren = [];
-                                } else if (preserveSpacing && currentParagraphChildren.length > 0) {
-                                    // Add a line break run between lines inside paragraph
-                                    currentParagraphChildren.push(new TextRun({ break: 1 }));
-                                } else if (currentParagraphChildren.length > 0) {
-                                    currentParagraphChildren.push(new TextRun({ text: " " }));
                                 }
 
-                                // Build text runs for this line with spacing
-                                let prevItemEnd = null;
-                                lineObj.items.forEach(it => {
-                                    let spacePrefix = "";
-                                    if (prevItemEnd !== null && (it.x - prevItemEnd > 3.0) && !it.text.startsWith(' ')) {
-                                        spacePrefix = " ";
+                            } else {
+                                // MODE: Presisi Visual & Tabular (100% Real Text with Alignment, Indents & TabStops)
+                                lines.forEach(lineObj => {
+                                    lineObj.items.sort((a, b) => a.x - b.x);
+
+                                    const lineLeft = lineObj.items[0].x;
+                                    const lastItem = lineObj.items[lineObj.items.length - 1];
+                                    const lineRight = lastItem.x + (lastItem.width || 0);
+                                    const lineWidth = lineRight - lineLeft;
+                                    const pageMidX = pageWidth / 2;
+                                    const lineMidX = lineLeft + (lineWidth / 2);
+
+                                    // Detect Alignment
+                                    let alignment = AlignmentType.LEFT;
+                                    let indentLeftTwips = 0;
+
+                                    // Check if line is Centered (Kop surat, judul SK, nomor tengah)
+                                    const isCentered = (Math.abs(lineMidX - pageMidX) < 28) && (lineWidth < pageWidth * 0.82);
+                                    // Check if Right-aligned (Tanggal surat di kanan, tanda tangan kanan)
+                                    const isRightAligned = (pageWidth - lineRight < 85) && (lineLeft > pageWidth * 0.42);
+
+                                    if (isCentered) {
+                                        alignment = AlignmentType.CENTER;
+                                    } else if (isRightAligned) {
+                                        alignment = AlignmentType.RIGHT;
+                                    } else {
+                                        alignment = AlignmentType.LEFT;
+                                        // Indentation for items past base margin (~36-40pt)
+                                        if (lineLeft > 54) {
+                                            indentLeftTwips = Math.round((lineLeft - 40) * 20);
+                                        }
                                     }
-                                    prevItemEnd = it.x + it.width;
 
-                                    // Word font size unit is half-points (e.g. 11pt = 22)
-                                    const wordSize = Math.max(16, Math.min(56, it.fontSize * 2));
+                                    // Vertical spacing gap before this line
+                                    let spacingBefore = 0;
+                                    if (prevLineY !== null && preserveSpacing) {
+                                        const lineGap = prevLineY - lineObj.y;
+                                        const lineBaseHeight = Math.max(12, lineObj.items[0].fontSize * 1.25);
+                                        if (lineGap > lineBaseHeight * 1.4) {
+                                            spacingBefore = Math.min(500, Math.round((lineGap - lineBaseHeight) * 16));
+                                        }
+                                    }
+                                    prevLineY = lineObj.y;
 
-                                    currentParagraphChildren.push(
-                                        new TextRun({
-                                            text: spacePrefix + it.text,
-                                            bold: it.isBold,
-                                            italics: it.isItalic,
-                                            size: wordSize
-                                        })
-                                    );
+                                    // Tab Stops and Column Positioning within line
+                                    const tabStops = [];
+                                    const lineChildren = [];
+                                    let prevRight = null;
+
+                                    for (let i = 0; i < lineObj.items.length; i++) {
+                                        const it = lineObj.items[i];
+                                        const gapX = prevRight !== null ? (it.x - prevRight) : 0;
+
+                                        // Column threshold (e.g. key-value pairs, multi-column tables)
+                                        const columnGapThreshold = mode === 'table' ? 20 : 30;
+
+                                        if (prevRight !== null && gapX > columnGapThreshold) {
+                                            const tabTwips = Math.round(it.x * 20);
+                                            tabStops.push({
+                                                type: TabStopType.LEFT,
+                                                position: tabTwips
+                                            });
+                                            lineChildren.push(new TextRun({ text: '\t' }));
+                                        } else if (prevRight !== null && gapX > 2.5 && !it.text.startsWith(' ')) {
+                                            lineChildren.push(new TextRun({ text: ' ' }));
+                                        }
+
+                                        prevRight = it.x + it.width;
+
+                                        const halfPts = Math.max(16, Math.min(56, Math.round(it.fontSize * 2)));
+                                        lineChildren.push(
+                                            new TextRun({
+                                                text: it.text,
+                                                bold: it.isBold,
+                                                italics: it.isItalic,
+                                                size: halfPts
+                                            })
+                                        );
+                                    }
+
+                                    const pOptions = {
+                                        alignment: alignment,
+                                        children: lineChildren
+                                    };
+
+                                    if (indentLeftTwips > 0 && alignment === AlignmentType.LEFT) {
+                                        pOptions.indent = { left: indentLeftTwips };
+                                    }
+
+                                    if (spacingBefore > 0) {
+                                        pOptions.spacing = { before: spacingBefore, line: 240, after: 40 };
+                                    } else {
+                                        pOptions.spacing = { line: 240, after: 40 };
+                                    }
+
+                                    if (tabStops.length > 0) {
+                                        pOptions.tabStops = tabStops;
+                                    }
+
+                                    docChildren.push(new Paragraph(pOptions));
                                 });
-                            });
-
-                            // Push any remaining paragraph
-                            if (currentParagraphChildren.length > 0) {
-                                docChildren.push(
-                                    new Paragraph({
-                                        spacing: { after: 160, line: 276 },
-                                        children: currentParagraphChildren
-                                    })
-                                );
                             }
                         }
 
-                        // Add Page Break if not the last page
+                        // Page Break between pages
                         if (addPageBreak && pageNum < numPages) {
                             docChildren.push(
                                 new Paragraph({
@@ -1378,7 +1459,7 @@
                         }
                     }
 
-                    // Build Document
+                    // Build Document with Exact Page Sizing (A4 / Original PDF Dimensions in twips)
                     item.progressText = 'Menyusun berkas Word (.docx)...';
                     item.progressPercent = 95;
                     updateFileCardDOM(item);
@@ -1386,15 +1467,19 @@
                     const doc = new Document({
                         creator: 'Tools Kepegawaian Kemenag',
                         title: item.file.name.replace(/\.[^/.]+$/, ""),
-                        description: 'Hasil konversi cerdas PDF ke DOCX',
+                        description: 'Hasil konversi presisi teks PDF ke DOCX',
                         sections: [{
                             properties: {
                                 page: {
+                                    size: {
+                                        width: Math.round(firstPageWidth * 20),
+                                        height: Math.round(firstPageHeight * 20)
+                                    },
                                     margin: {
-                                        top: 1000,
-                                        right: 1000,
-                                        bottom: 1000,
-                                        left: 1000
+                                        top: 720,
+                                        right: 720,
+                                        bottom: 720,
+                                        left: 720
                                     }
                                 }
                             },

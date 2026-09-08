@@ -1308,10 +1308,10 @@
             }
 
             // Extract genuine embedded images from PDF page using operatorList
-            async function extractPageImages(page, pageWidth, pageHeight) {
+            async function extractPageImages(page, pageWidth, pageHeight, existingOpList = null) {
                 const images = [];
                 try {
-                    const opList = await page.getOperatorList();
+                    const opList = existingOpList || (await page.getOperatorList());
                     let currentMatrix = [1, 0, 0, 1, 0, 0];
                     const matrixStack = [];
 
@@ -1423,7 +1423,7 @@
                 item.progressPercent = 10;
                 updateFileCardDOM(item);
 
-                const { Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak, AlignmentType, TabStopType, ImageRun } = window.docx;
+                const { Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak, AlignmentType, TabStopType, ImageRun, Table, TableRow, TableCell, WidthType, BorderStyle } = window.docx;
                 const mode = document.querySelector('input[name="convertMode"]:checked')?.value || 'visual';
                 const addPageBreak = chkPageBreak.checked;
                 const preserveSpacing = chkPreserveSpacing.checked;
@@ -1458,9 +1458,48 @@
                             firstPageHeight = pageHeight;
                         }
 
+                        // Load operator list & ensure common objects (fonts) are available
+                        const opList = await page.getOperatorList();
+
                         // Extract text content
                         const textContent = await page.getTextContent();
                         const rawItems = textContent.items || [];
+
+                        // 1. Resolve all fonts from page.commonObjs
+                        const fontMap = {};
+                        const fontKeys = new Set(rawItems.map(it => it.fontName));
+                        for (const fKey of fontKeys) {
+                            let fontObj = null;
+                            try {
+                                if (page.commonObjs && page.commonObjs.has(fKey)) {
+                                    fontObj = await new Promise(r => {
+                                        try {
+                                            page.commonObjs.get(fKey, obj => r(obj));
+                                        } catch(e) { r(null); }
+                                        setTimeout(() => r(null), 120);
+                                    });
+                                }
+                            } catch(e) { /* ignore */ }
+
+                            const rawName = fontObj?.name || fontObj?.fallbackName || textContent.styles?.[fKey]?.fontFamily || '';
+                            const lower = rawName.toLowerCase();
+                            const isBold = fontObj?.bold === true ||
+                                           fontObj?.weight === 'bold' ||
+                                           (typeof fontObj?.weight === 'number' && fontObj.weight >= 600) ||
+                                           lower.includes('bold') ||
+                                           lower.includes('black') ||
+                                           lower.includes('heavy') ||
+                                           lower.includes('semibold') ||
+                                           lower.includes('demibold') ||
+                                           lower.includes('w6') || lower.includes('w7') || lower.includes('w8');
+
+                            const isItalic = fontObj?.italic === true ||
+                                             lower.includes('italic') ||
+                                             lower.includes('oblique');
+
+                            const cleanFont = resolveCleanFont(rawName);
+                            fontMap[fKey] = { name: rawName, fontFamily: cleanFont, isBold, isItalic };
+                        }
 
                         // Filter out empty and watermark strings (Powered by TCPDF)
                         const processedItems = rawItems
@@ -1470,29 +1509,36 @@
                                 return true;
                             })
                             .map(it => {
-                                const fontSize = Math.round(Math.hypot(it.transform[0], it.transform[1]) || it.height || 11);
-                                const fontName = (it.fontName || '').toLowerCase();
-                                const isBold = fontName.includes('bold') || fontName.includes('black') || fontName.includes('heavy') || fontName.includes('b') || fontName.includes('medium');
-                                const isItalic = fontName.includes('italic') || fontName.includes('oblique');
-                                const cleanFont = resolveCleanFont(it.fontName);
+                                const info = fontMap[it.fontName] || { fontFamily: 'Arial', isBold: false, isItalic: false };
+                                const exactPt = Math.hypot(it.transform[0], it.transform[1]) || it.height || 11;
+                                const fontSizePt = Math.round(exactPt * 10) / 10;
+                                const halfPts = Math.round(exactPt * 2);
 
-                                // Track font frequency
-                                fontCounts[cleanFont] = (fontCounts[cleanFont] || 0) + 1;
+                                let isBold = info.isBold;
+                                const trimmedStr = it.str.trim();
+                                if (!isBold && trimmedStr.length >= 4 && trimmedStr === trimmedStr.toUpperCase() && /^[A-Z0-9\s\.\,\-\/\:\(\)]+$/.test(trimmedStr)) {
+                                    if (/^(KEPUTUSAN|PERATURAN|UNDANGAN|PENGUMUMAN|SURAT\s+EDARAN|MEMUTUSKAN|MENETAPKAN|MENIMBANG|MENGINGAT|KEMENTERIAN\s+AGAMA|DIREKTORAT\s+JENDERAL|KANTOR\s+KEMENTERIAN)/.test(trimmedStr)) {
+                                        isBold = true;
+                                    }
+                                }
+
+                                fontCounts[info.fontFamily] = (fontCounts[info.fontFamily] || 0) + 1;
 
                                 return {
                                     text: it.str,
                                     x: it.transform[4],
                                     y: it.transform[5],
                                     width: it.width || 0,
-                                    height: it.height || fontSize,
-                                    fontSize: fontSize,
+                                    height: it.height || fontSizePt,
+                                    fontSizePt: fontSizePt,
+                                    halfPts: Math.max(12, Math.min(144, halfPts)),
                                     isBold: isBold,
-                                    isItalic: isItalic,
-                                    fontFamily: cleanFont
+                                    isItalic: info.isItalic,
+                                    fontFamily: info.fontFamily
                                 };
                             });
 
-                        // Calculate dynamic page margins based on detected content bounding box
+                        // Dynamic margins based on content bounding box
                         let pageMinX = 54;
                         let pageMaxX = pageWidth - 54;
                         let pageMinY = 54;
@@ -1502,14 +1548,13 @@
                             pageMinX = Math.min(...processedItems.map(it => it.x));
                             pageMaxX = Math.max(...processedItems.map(it => it.x + (it.width || 0)));
                             pageMinY = Math.min(...processedItems.map(it => it.y));
-                            pageMaxY = Math.max(...processedItems.map(it => it.y + (it.height || it.fontSize || 12)));
+                            pageMaxY = Math.max(...processedItems.map(it => it.y + (it.height || it.fontSizePt || 12)));
                         }
 
-                        // Convert to Word twips (1 pt = 20 twips) and clamp realistically (0.35 in to 1.5 in)
-                        const detectedMarginLeft = Math.max(500, Math.min(2160, Math.round(pageMinX * 20)));
-                        const detectedMarginRight = Math.max(500, Math.min(2160, Math.round((pageWidth - pageMaxX) * 20)));
-                        const detectedMarginTop = Math.max(500, Math.min(2160, Math.round((pageHeight - pageMaxY) * 20)));
-                        const detectedMarginBottom = Math.max(500, Math.min(2160, Math.round(pageMinY * 20)));
+                        const detectedMarginLeft = Math.max(400, Math.min(2160, Math.round(pageMinX * 20)));
+                        const detectedMarginRight = Math.max(400, Math.min(2160, Math.round((pageWidth - pageMaxX) * 20)));
+                        const detectedMarginTop = Math.max(400, Math.min(2160, Math.round((pageHeight - pageMaxY) * 20)));
+                        const detectedMarginBottom = Math.max(400, Math.min(2160, Math.round(pageMinY * 20)));
 
                         if (pageNum === 1) {
                             docMargin = {
@@ -1520,10 +1565,10 @@
                             };
                         }
 
-                        // Extract genuine embedded images (logos, stamps, photos) from PDF if enabled
+                        // Extract genuine embedded images (logos, stamps, photos) from PDF using pre-extracted opList
                         let pageImages = [];
                         if (extractImages) {
-                            pageImages = await extractPageImages(page, pageWidth, pageHeight);
+                            pageImages = await extractPageImages(page, pageWidth, pageHeight, opList);
                         }
 
                         if (processedItems.length === 0 && pageImages.length === 0) {
@@ -1552,7 +1597,7 @@
                                 if (currentLineY === null) {
                                     currentLineY = it.y;
                                     currentLine.push(it);
-                                } else if (Math.abs(it.y - currentLineY) <= Math.max(3.5, it.fontSize * 0.35)) {
+                                } else if (Math.abs(it.y - currentLineY) <= Math.max(3.5, it.fontSizePt * 0.35)) {
                                     currentLine.push(it);
                                 } else {
                                     lines.push({ y: currentLineY, items: currentLine });
@@ -1564,24 +1609,131 @@
                                 lines.push({ y: currentLineY, items: currentLine });
                             }
 
-                            // Combine text lines and embedded images into unified page elements list
-                            const pageElements = [
-                                ...lines.map(line => ({ type: 'line', y: line.y, line: line })),
-                                ...pageImages.map(img => ({ type: 'image', y: img.y, image: img }))
-                            ];
+                            const contentWidthPt = Math.max(100, pageMaxX - pageMinX);
+                            const contentWidthTwips = Math.round(contentWidthPt * 20);
 
-                            // Sort elements by Y descending (PDF top-to-bottom order)
+                            // Detect Kop Surat (Logo on the left, Header text beside it)
+                            let kopLogo = null;
+                            const kopLineIndices = new Set();
+
+                            if (extractImages && pageImages.length > 0) {
+                                const possibleLogo = pageImages.find(img =>
+                                    img.x < pageWidth * 0.35 &&
+                                    img.y > pageHeight * 0.68 &&
+                                    img.width < pageWidth * 0.35 &&
+                                    img.height > 20
+                                );
+                                if (possibleLogo) {
+                                    const logoTop = possibleLogo.y + possibleLogo.height + 25;
+                                    const logoBottom = possibleLogo.y - 20;
+                                    lines.forEach((l, idx) => {
+                                        if (l.y <= logoTop && l.y >= logoBottom && l.items[0].x > possibleLogo.x + 20) {
+                                            kopLineIndices.add(idx);
+                                        }
+                                    });
+                                    if (kopLineIndices.size >= 2) {
+                                        kopLogo = possibleLogo;
+                                    } else {
+                                        kopLineIndices.clear();
+                                    }
+                                }
+                            }
+
+                            // If Kop Surat is detected, render it as a 2-column borderless table
+                            if (kopLogo && kopLineIndices.size > 0) {
+                                const logoW = kopLogo.width;
+                                const logoH = kopLogo.height;
+                                const maxLogoW = 110;
+                                const scale = logoW > maxLogoW ? (maxLogoW / logoW) : 1;
+                                const rW = Math.round(logoW * scale);
+                                const rH = Math.round(logoH * scale);
+
+                                const logoColTwips = Math.round((rW + 15) * 20);
+                                const textColTwips = Math.max(1000, contentWidthTwips - logoColTwips);
+
+                                const kopParagraphs = [];
+                                lines.forEach((l, idx) => {
+                                    if (kopLineIndices.has(idx)) {
+                                        l.items.sort((a, b) => a.x - b.x);
+                                        const kChildren = [];
+                                        let prevRight = null;
+                                        l.items.forEach(it => {
+                                            if (prevRight !== null && (it.x - prevRight > 2.5) && !it.text.startsWith(' ')) {
+                                                kChildren.push(new TextRun({ text: ' ' }));
+                                            }
+                                            prevRight = it.x + it.width;
+                                            kChildren.push(new TextRun({
+                                                text: it.text,
+                                                bold: it.isBold,
+                                                italics: it.isItalic,
+                                                size: it.halfPts,
+                                                font: it.fontFamily
+                                            }));
+                                        });
+                                        kopParagraphs.push(new Paragraph({
+                                            alignment: AlignmentType.CENTER,
+                                            spacing: { line: 240, after: 20 },
+                                            children: kChildren
+                                        }));
+                                    }
+                                });
+
+                                docChildren.push(new Table({
+                                    width: { size: contentWidthTwips, type: WidthType.DXA },
+                                    borders: {
+                                        top: { style: BorderStyle.NONE },
+                                        bottom: { style: BorderStyle.NONE },
+                                        left: { style: BorderStyle.NONE },
+                                        right: { style: BorderStyle.NONE },
+                                        insideHorizontal: { style: BorderStyle.NONE },
+                                        insideVertical: { style: BorderStyle.NONE }
+                                    },
+                                    rows: [
+                                        new TableRow({
+                                            children: [
+                                                new TableCell({
+                                                    width: { size: logoColTwips, type: WidthType.DXA },
+                                                    children: [
+                                                        new Paragraph({
+                                                            alignment: AlignmentType.CENTER,
+                                                            children: [
+                                                                new ImageRun({
+                                                                    data: kopLogo.data,
+                                                                    transformation: { width: rW, height: rH }
+                                                                })
+                                                            ]
+                                                        })
+                                                    ]
+                                                }),
+                                                new TableCell({
+                                                    width: { size: textColTwips, type: WidthType.DXA },
+                                                    children: kopParagraphs
+                                                })
+                                            ]
+                                        })
+                                    ]
+                                }));
+                            }
+
+                            // Filter remaining lines and images
+                            const remainingLines = lines.filter((_, idx) => !kopLineIndices.has(idx));
+                            const remainingImages = pageImages.filter(img => img !== kopLogo);
+
+                            // Combine into page elements
+                            const pageElements = [
+                                ...remainingLines.map(line => ({ type: 'line', y: line.y, line: line })),
+                                ...remainingImages.map(img => ({ type: 'image', y: img.y, image: img }))
+                            ];
                             pageElements.sort((a, b) => b.y - a.y);
 
-                            // Process elements
                             let prevElementY = null;
                             const avgFontSize = processedItems.length > 0
-                                ? (processedItems.reduce((acc, it) => acc + it.fontSize, 0) / processedItems.length)
+                                ? (processedItems.reduce((acc, it) => acc + it.fontSizePt, 0) / processedItems.length)
                                 : 12;
                             const avgLineGap = avgFontSize * 1.35;
 
                             if (mode === 'flow') {
-                                // MODE: Paragraf Mengalir (Merge flow text)
+                                // Flow Mode
                                 let flowChildren = [];
                                 pageElements.forEach(el => {
                                     if (el.type === 'image') {
@@ -1608,7 +1760,6 @@
                                     const lineObj = el.line;
                                     lineObj.items.sort((a, b) => a.x - b.x);
 
-                                    // Check watermark line
                                     const lineFullText = lineObj.items.map(it => it.text).join('');
                                     if (removeWatermark && isWatermarkText(lineFullText)) return;
 
@@ -1635,7 +1786,7 @@
                                                 text: spacePrefix + it.text,
                                                 bold: it.isBold,
                                                 italics: it.isItalic,
-                                                size: Math.max(16, Math.min(56, it.fontSize * 2)),
+                                                size: it.halfPts,
                                                 font: it.fontFamily
                                             })
                                         );
@@ -1647,7 +1798,7 @@
                                 }
 
                             } else {
-                                // MODE: Presisi Visual & Tabular (100% Real Text & Embedded Images with Alignment, Indents & TabStops)
+                                // Visual & Tabular Precision Mode
                                 pageElements.forEach(el => {
                                     if (el.type === 'image') {
                                         const img = el.image;
@@ -1662,7 +1813,7 @@
 
                                         const pImgOptions = {
                                             alignment: alignment,
-                                            spacing: { before: 120, after: 120 },
+                                            spacing: { before: 100, after: 100 },
                                             children: [
                                                 new ImageRun({
                                                     data: img.data,
@@ -1688,7 +1839,6 @@
                                     const lineObj = el.line;
                                     lineObj.items.sort((a, b) => a.x - b.x);
 
-                                    // Check watermark line
                                     const lineFullText = lineObj.items.map(it => it.text).join('');
                                     if (removeWatermark && isWatermarkText(lineFullText)) {
                                         return;
@@ -1705,10 +1855,8 @@
                                     let alignment = AlignmentType.LEFT;
                                     let indentLeftTwips = 0;
 
-                                    // Check if line is Centered (Kop surat, judul SK, nomor tengah)
-                                    const isCentered = (Math.abs(lineMidX - pageMidX) < 28) && (lineWidth < pageWidth * 0.82);
-                                    // Check if Right-aligned (Tanggal surat di kanan, tanda tangan kanan)
-                                    const isRightAligned = (pageWidth - lineRight < 85) && (lineLeft > pageWidth * 0.42);
+                                    const isCentered = (Math.abs(lineMidX - pageMidX) < 32) && (lineWidth < pageWidth * 0.82);
+                                    const isRightAligned = (pageWidth - lineRight < 90) && (lineLeft > pageWidth * 0.42);
 
                                     if (isCentered) {
                                         alignment = AlignmentType.CENTER;
@@ -1716,73 +1864,118 @@
                                         alignment = AlignmentType.RIGHT;
                                     } else {
                                         alignment = AlignmentType.LEFT;
-                                        // Indentation relative to detected left margin
-                                        if (lineLeft > pageMinX + 10) {
+                                        if (lineLeft > pageMinX + 12) {
                                             indentLeftTwips = Math.round((lineLeft - pageMinX) * 20);
                                         }
                                     }
 
                                     // Vertical spacing gap before this line
                                     let spacingBefore = 0;
+                                    const lineBaseHeight = Math.max(10, lineObj.items[0].fontSizePt * 1.25);
                                     if (prevElementY !== null && preserveSpacing) {
                                         const lineGap = prevElementY - lineObj.y;
-                                        const lineBaseHeight = Math.max(12, lineObj.items[0].fontSize * 1.25);
                                         if (lineGap > lineBaseHeight * 1.4) {
-                                            spacingBefore = Math.min(500, Math.round((lineGap - lineBaseHeight) * 16));
+                                            spacingBefore = Math.min(360, Math.round((lineGap - lineBaseHeight) * 16));
                                         }
                                     }
                                     prevElementY = lineObj.y;
 
-                                    // Tab Stops and Column Positioning within line
-                                    const tabStops = [];
-                                    const lineChildren = [];
-                                    let prevRight = null;
-
-                                    for (let i = 0; i < lineObj.items.length; i++) {
-                                        const it = lineObj.items[i];
-                                        const gapX = prevRight !== null ? (it.x - prevRight) : 0;
-
-                                        // Column threshold (e.g. key-value pairs, multi-column tables)
-                                        const columnGapThreshold = mode === 'table' ? 20 : 30;
-
-                                        if (prevRight !== null && gapX > columnGapThreshold) {
-                                            const tabTwips = Math.round(it.x * 20);
-                                            tabStops.push({
-                                                type: TabStopType.LEFT,
-                                                position: tabTwips
-                                            });
-                                            lineChildren.push(new TextRun({ text: '\t' }));
-                                        } else if (prevRight !== null && gapX > 2.5 && !it.text.startsWith(' ')) {
-                                            lineChildren.push(new TextRun({ text: ' ' }));
+                                    // Check split two-column line (Nomor on left, Tanggal on right)
+                                    let splitIndex = -1;
+                                    for (let i = 0; i < lineObj.items.length - 1; i++) {
+                                        const itA = lineObj.items[i];
+                                        const itB = lineObj.items[i + 1];
+                                        const gapX = itB.x - (itA.x + (itA.width || 0));
+                                        if (gapX > 50 && itB.x > pageMinX + (contentWidthPt * 0.45) && alignment === AlignmentType.LEFT) {
+                                            splitIndex = i + 1;
+                                            break;
                                         }
+                                    }
 
-                                        prevRight = it.x + it.width;
+                                    const lineChildren = [];
+                                    const tabStops = [];
 
-                                        const halfPts = Math.max(16, Math.min(56, Math.round(it.fontSize * 2)));
-                                        lineChildren.push(
-                                            new TextRun({
+                                    if (splitIndex !== -1) {
+                                        let prevRight = null;
+                                        for (let i = 0; i < splitIndex; i++) {
+                                            const it = lineObj.items[i];
+                                            if (prevRight !== null && (it.x - prevRight > 2.5) && !it.text.startsWith(' ')) {
+                                                lineChildren.push(new TextRun({ text: ' ' }));
+                                            }
+                                            prevRight = it.x + it.width;
+                                            lineChildren.push(new TextRun({
                                                 text: it.text,
                                                 bold: it.isBold,
                                                 italics: it.isItalic,
-                                                size: halfPts,
+                                                size: it.halfPts,
                                                 font: it.fontFamily
-                                            })
-                                        );
+                                            }));
+                                        }
+
+                                        // Right-aligned TabStop positioned at page content width
+                                        tabStops.push({
+                                            type: TabStopType.RIGHT,
+                                            position: contentWidthTwips
+                                        });
+                                        lineChildren.push(new TextRun({ text: '\t' }));
+
+                                        prevRight = null;
+                                        for (let i = splitIndex; i < lineObj.items.length; i++) {
+                                            const it = lineObj.items[i];
+                                            if (prevRight !== null && (it.x - prevRight > 2.5) && !it.text.startsWith(' ')) {
+                                                lineChildren.push(new TextRun({ text: ' ' }));
+                                            }
+                                            prevRight = it.x + it.width;
+                                            lineChildren.push(new TextRun({
+                                                text: it.text,
+                                                bold: it.isBold,
+                                                italics: it.isItalic,
+                                                size: it.halfPts,
+                                                font: it.fontFamily
+                                            }));
+                                        }
+                                    } else {
+                                        // Standard line
+                                        let prevRight = null;
+                                        for (let i = 0; i < lineObj.items.length; i++) {
+                                            const it = lineObj.items[i];
+                                            const gapX = prevRight !== null ? (it.x - prevRight) : 0;
+
+                                            if (prevRight !== null && gapX > (mode === 'table' ? 18 : 26) && alignment === AlignmentType.LEFT) {
+                                                const relX = Math.max(0, it.x - pageMinX);
+                                                const tabTwips = Math.round(relX * 20);
+                                                tabStops.push({
+                                                    type: TabStopType.LEFT,
+                                                    position: tabTwips
+                                                });
+                                                lineChildren.push(new TextRun({ text: '\t' }));
+                                            } else if (prevRight !== null && gapX > 2.5 && !it.text.startsWith(' ')) {
+                                                lineChildren.push(new TextRun({ text: ' ' }));
+                                            }
+
+                                            prevRight = it.x + it.width;
+                                            lineChildren.push(new TextRun({
+                                                text: it.text,
+                                                bold: it.isBold,
+                                                italics: it.isItalic,
+                                                size: it.halfPts,
+                                                font: it.fontFamily
+                                            }));
+                                        }
                                     }
 
                                     const pOptions = {
                                         alignment: alignment,
+                                        spacing: {
+                                            before: spacingBefore,
+                                            line: 240,
+                                            after: 20
+                                        },
                                         children: lineChildren
                                     };
 
                                     if (indentLeftTwips > 0 && alignment === AlignmentType.LEFT) {
                                         pOptions.indent = { left: indentLeftTwips };
-                                    }
-
-                                    if (spacingBefore > 0) {
-                                        pOptions.spacing = { before: spacingBefore, line: 240, after: 30 };
-                                    } else {
-                                        pOptions.spacing = { line: 240, after: 30 };
                                     }
 
                                     if (tabStops.length > 0) {
@@ -1826,7 +2019,11 @@
                             default: {
                                 document: {
                                     run: {
-                                        font: dominantFont
+                                        font: dominantFont,
+                                        size: 24
+                                    },
+                                    paragraph: {
+                                        spacing: { line: 240, after: 20 }
                                     }
                                 }
                             }

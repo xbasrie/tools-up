@@ -1200,6 +1200,16 @@
                 btnDownloadAllZip.disabled = completedCount === 0;
             }
 
+            // Helper: Clean and filter Srikandi tags (${...}) and invisible barcode/tracking digit strings
+            function cleanSrikandiTokens(str) {
+                if (!str) return '';
+                // Remove template placeholders like ${nomor_naskah}, ${tanggal_naskah}, ${ttd_pengirim}, ${ttd}, ${nama_pengirim}
+                let cleaned = str.replace(/\$\{[\w_]+\}/g, '');
+                // Remove long barcode/tracking numbers (10+ digits) produced by digital signature stamps
+                cleaned = cleaned.replace(/\b\d{10,20}\b/g, '');
+                return cleaned;
+            }
+
             // Helper: Detect and filter watermarks like "Powered by TCPDF (www.tcpdf.org)"
             function isWatermarkText(str) {
                 if (!str) return false;
@@ -1501,8 +1511,15 @@
                             fontMap[fKey] = { name: rawName, fontFamily: cleanFont, isBold, isItalic };
                         }
 
-                        // Filter out empty and watermark strings (Powered by TCPDF)
+                        // Filter out empty, Srikandi tokens, and watermark strings (Powered by TCPDF)
                         const processedItems = rawItems
+                            .map(it => {
+                                const cleanedStr = cleanSrikandiTokens(it.str || '');
+                                return {
+                                    ...it,
+                                    str: cleanedStr
+                                };
+                            })
                             .filter(it => {
                                 if (!it.str || it.str.trim().length === 0) return false;
                                 if (removeWatermark && isWatermarkText(it.str)) return false;
@@ -1798,9 +1815,111 @@
                                 }
 
                             } else {
-                                // Visual & Tabular Precision Mode
+                                // Visual & Tabular Precision Mode (100% Native Editable Text)
+                                function checkIsCentered(lineLeft, lineRight, lineWidth) {
+                                    const distFromLeft = lineLeft - pageMinX;
+                                    const distFromRight = pageMaxX - lineRight;
+                                    const pageMidX = pageWidth / 2;
+                                    const lineMidX = lineLeft + (lineWidth / 2);
+
+                                    return (distFromLeft > 28) &&
+                                           (distFromRight > 28) &&
+                                           (lineLeft < pageWidth * 0.52) &&
+                                           (lineWidth < contentWidthPt * 0.82) &&
+                                           (Math.abs(lineMidX - pageMidX) < 26);
+                                }
+
+                                function checkIsBodyLine(lineObj) {
+                                    if (lineObj.y < 75) return false;
+
+                                    const lineLeft = lineObj.items[0].x;
+                                    const lastItem = lineObj.items[lineObj.items.length - 1];
+                                    const lineRight = lastItem.x + (lastItem.width || 0);
+                                    const lineWidth = lineRight - lineLeft;
+                                    const lineFullText = lineObj.items.map(it => it.text).join(' ').trim();
+
+                                    if (checkIsCentered(lineLeft, lineRight, lineWidth)) {
+                                        return false;
+                                    }
+
+                                    if (lineLeft > pageMinX + contentWidthPt * 0.48) {
+                                        return false;
+                                    }
+
+                                    for (let i = 0; i < lineObj.items.length - 1; i++) {
+                                        const itA = lineObj.items[i];
+                                        const itB = lineObj.items[i + 1];
+                                        const gapX = itB.x - (itA.x + (itA.width || 0));
+                                        if (gapX >= 35 && itB.x >= pageMinX + (contentWidthPt * 0.38)) {
+                                            return false;
+                                        }
+                                    }
+
+                                    if (/^(Nomor|Sifat|Lampiran|Hal|Yth\.?|di\s*-\s*Tempat|NIP\.?)\b/i.test(lineFullText)) {
+                                        return false;
+                                    }
+
+                                    if (/^(Hari\s*,\s*Tanggal|Hari|Tanggal|Waktu|Pukul|Tempat|Acara|Agenda)\s*:/i.test(lineFullText)) {
+                                        return false;
+                                    }
+
+                                    if (/^(\d+[\.\)]|[a-zA-Z][\.\)]|[\u2022\-\*])\s+/.test(lineFullText)) {
+                                        return false;
+                                    }
+
+                                    return true;
+                                }
+
+                                let currentBodyCluster = null;
+
+                                function flushBodyCluster(cluster) {
+                                    if (!cluster || cluster.lines.length === 0) return;
+
+                                    const bodyChildren = [];
+                                    cluster.lines.forEach((line, lineIdx) => {
+                                        let prevRight = null;
+                                        line.items.forEach((it, itIdx) => {
+                                            if (lineIdx > 0 && itIdx === 0) {
+                                                bodyChildren.push(new TextRun({ text: ' ' }));
+                                            } else if (prevRight !== null && (it.x - prevRight > 2.0) && !it.text.startsWith(' ')) {
+                                                bodyChildren.push(new TextRun({ text: ' ' }));
+                                            }
+                                            prevRight = it.x + it.width;
+
+                                            bodyChildren.push(new TextRun({
+                                                text: it.text,
+                                                bold: it.isBold,
+                                                italics: it.isItalic,
+                                                size: it.halfPts,
+                                                font: it.fontFamily
+                                            }));
+                                        });
+                                    });
+
+                                    const pOptions = {
+                                        alignment: AlignmentType.BOTH,
+                                        spacing: {
+                                            before: Math.max(120, cluster.spacingBefore || 120),
+                                            line: 360,
+                                            after: 120
+                                        },
+                                        children: bodyChildren
+                                    };
+
+                                    if (cluster.hasFirstLineIndent) {
+                                        pOptions.indent = { firstLine: 720 };
+                                    }
+
+                                    docChildren.push(new Paragraph(pOptions));
+                                }
+
                                 pageElements.forEach(el => {
                                     if (el.type === 'image') {
+                                        if (currentBodyCluster) {
+                                            flushBodyCluster(currentBodyCluster);
+                                            currentBodyCluster = null;
+                                        }
+
                                         const img = el.image;
                                         const isImgCenter = Math.abs((img.x + img.width / 2) - (pageWidth / 2)) < 35;
                                         const isImgRight = (pageWidth - (img.x + img.width) < 95) && (img.x > pageWidth * 0.4);
@@ -1839,24 +1958,74 @@
                                     const lineObj = el.line;
                                     lineObj.items.sort((a, b) => a.x - b.x);
 
-                                    const lineFullText = lineObj.items.map(it => it.text).join('');
+                                    const lineFullText = lineObj.items.map(it => it.text).join(' ').trim();
                                     if (removeWatermark && isWatermarkText(lineFullText)) {
                                         return;
+                                    }
+
+                                    // Vertical spacing gap before this line
+                                    let spacingBefore = 0;
+                                    const lineBaseHeight = Math.max(10, lineObj.items[0].fontSizePt * 1.25);
+                                    if (prevElementY !== null && preserveSpacing) {
+                                        const lineGap = prevElementY - lineObj.y;
+                                        if (lineGap > lineBaseHeight * 1.4) {
+                                            spacingBefore = Math.min(360, Math.round((lineGap - lineBaseHeight) * 16));
+                                        }
+                                    }
+
+                                    // Check if line belongs to narrative body paragraph
+                                    const isBody = checkIsBodyLine(lineObj);
+
+                                    if (isBody) {
+                                        const isIndented = (lineObj.items[0].x - pageMinX) > 20 && (lineObj.items[0].x - pageMinX) < 55;
+
+                                        if (!currentBodyCluster) {
+                                            currentBodyCluster = {
+                                                lines: [lineObj],
+                                                hasFirstLineIndent: isIndented,
+                                                spacingBefore: spacingBefore
+                                            };
+                                        } else {
+                                            const lineGap = prevElementY !== null ? (prevElementY - lineObj.y) : avgLineGap;
+                                            const isNormalGap = lineGap <= avgLineGap * 1.65;
+                                            const prevLine = currentBodyCluster.lines[currentBodyCluster.lines.length - 1];
+                                            const prevLastItem = prevLine.items[prevLine.items.length - 1];
+                                            const prevLineRight = prevLastItem.x + (prevLastItem.width || 0);
+                                            const prevReachedRight = (pageMaxX - prevLineRight) < 65 || (prevLineRight - prevLine.items[0].x) > contentWidthPt * 0.65;
+
+                                            if (isNormalGap && (prevReachedRight || !isIndented)) {
+                                                currentBodyCluster.lines.push(lineObj);
+                                            } else {
+                                                flushBodyCluster(currentBodyCluster);
+                                                currentBodyCluster = {
+                                                    lines: [lineObj],
+                                                    hasFirstLineIndent: isIndented,
+                                                    spacingBefore: spacingBefore
+                                                };
+                                            }
+                                        }
+
+                                        prevElementY = lineObj.y;
+                                        return;
+                                    }
+
+                                    // Non-body line: Flush pending body cluster first
+                                    if (currentBodyCluster) {
+                                        flushBodyCluster(currentBodyCluster);
+                                        currentBodyCluster = null;
                                     }
 
                                     const lineLeft = lineObj.items[0].x;
                                     const lastItem = lineObj.items[lineObj.items.length - 1];
                                     const lineRight = lastItem.x + (lastItem.width || 0);
                                     const lineWidth = lineRight - lineLeft;
-                                    const pageMidX = pageWidth / 2;
-                                    const lineMidX = lineLeft + (lineWidth / 2);
 
                                     // Detect Alignment
                                     let alignment = AlignmentType.LEFT;
                                     let indentLeftTwips = 0;
 
-                                    const isCentered = (Math.abs(lineMidX - pageMidX) < 32) && (lineWidth < pageWidth * 0.82);
-                                    const isRightAligned = (pageWidth - lineRight < 90) && (lineLeft > pageWidth * 0.42);
+                                    const isCentered = checkIsCentered(lineLeft, lineRight, lineWidth);
+                                    const isRightAligned = (pageMaxX - lineRight < 25) && (lineLeft > pageWidth * 0.45) && (lineWidth < contentWidthPt * 0.45);
 
                                     if (isCentered) {
                                         alignment = AlignmentType.CENTER;
@@ -1869,24 +2038,13 @@
                                         }
                                     }
 
-                                    // Vertical spacing gap before this line
-                                    let spacingBefore = 0;
-                                    const lineBaseHeight = Math.max(10, lineObj.items[0].fontSizePt * 1.25);
-                                    if (prevElementY !== null && preserveSpacing) {
-                                        const lineGap = prevElementY - lineObj.y;
-                                        if (lineGap > lineBaseHeight * 1.4) {
-                                            spacingBefore = Math.min(360, Math.round((lineGap - lineBaseHeight) * 16));
-                                        }
-                                    }
-                                    prevElementY = lineObj.y;
-
                                     // Check split two-column line (Nomor on left, Tanggal on right)
                                     let splitIndex = -1;
                                     for (let i = 0; i < lineObj.items.length - 1; i++) {
                                         const itA = lineObj.items[i];
                                         const itB = lineObj.items[i + 1];
                                         const gapX = itB.x - (itA.x + (itA.width || 0));
-                                        if (gapX > 50 && itB.x > pageMinX + (contentWidthPt * 0.45) && alignment === AlignmentType.LEFT) {
+                                        if (gapX >= 35 && itB.x >= pageMinX + (contentWidthPt * 0.38) && alignment === AlignmentType.LEFT) {
                                             splitIndex = i + 1;
                                             break;
                                         }
@@ -1941,7 +2099,7 @@
                                             const it = lineObj.items[i];
                                             const gapX = prevRight !== null ? (it.x - prevRight) : 0;
 
-                                            if (prevRight !== null && gapX > (mode === 'table' ? 18 : 26) && alignment === AlignmentType.LEFT) {
+                                            if (prevRight !== null && gapX > (mode === 'table' ? 18 : 28) && alignment === AlignmentType.LEFT) {
                                                 const relX = Math.max(0, it.x - pageMinX);
                                                 const tabTwips = Math.round(relX * 20);
                                                 tabStops.push({
@@ -1983,7 +2141,13 @@
                                     }
 
                                     docChildren.push(new Paragraph(pOptions));
+                                    prevElementY = lineObj.y;
                                 });
+
+                                if (currentBodyCluster) {
+                                    flushBodyCluster(currentBodyCluster);
+                                    currentBodyCluster = null;
+                                }
                             }
                         }
 
